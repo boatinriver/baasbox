@@ -26,7 +26,7 @@ create property _BB_User.visibleByRegisteredUsers link _BB_UserAttributes;
 create property _BB_User.visibleByFriend link _BB_UserAttributes;
 create property _BB_User.visibleByTheUser link _BB_UserAttributes;
 create property _BB_User._audit embedded;
-create property _BB_User.user link ouser;
+create property _BB_User.c link ouser;
 
 
 --admin user
@@ -120,3 +120,8 @@ create property E.id String;
 alter property E.id notnull=true;
 create index E.id unique;
 
+--APPLICATION
+create class _BB_App extends _BB_Node;
+create property _BB_App.name string;
+alter property _BB_App.name mandatory=true;
+alter property _BB_App.name notnull=true;

@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Created by boat on 6/12/14.
  */
-public class Appservice {
+public class AppService {
     public static void drop(String appName) throws Throwable {
         AppDao dao = AppDao.getInstance();
         dao.delete(appName);

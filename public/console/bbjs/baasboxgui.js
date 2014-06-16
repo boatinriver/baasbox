@@ -16,6 +16,7 @@ String.prototype.endsWith = function(suffix) {
     return this.indexOf(suffix, this.length - suffix.length) !== -1;
 };
 
+var appDataArray;
 var userDataArray;
 var roleDataArray;
 var documentDataArray;
@@ -243,6 +244,13 @@ $('.btn-changepwd').click(function(e){
     resetChangePasswordForm();
     $('#changePwdModal').modal('show');
 }); // Show Modal for Change Password Admin
+
+$('.btn-addapp').click(function(e){
+    $("#appTitle").text("Create a new App");
+    $("#txtAppname").removeClass("disabled");
+    $("#txtAppname").prop('disabled', false);
+    $('#addAppModal').modal('show');
+}); // Show Modal for Add User
 
 $('.btn-adduser').click(function(e){
 	loadUserRole();
@@ -637,6 +645,20 @@ function reverseJSON(objJSON)
 	return JSON.stringify(obj, undefined, 2);
 }
 
+function loadAppTable()
+{
+    BBRoutes.com.baasbox.controllers.Application.appList().ajax({
+        data: {orderBy: "app.name asc"},
+        success: function(data) {
+            appDataArray = data["data"];
+            //console.debug("Admin.getUsers success:");
+            //console.debug(data);
+            $('#appTable').dataTable().fnClearTable();
+            $('#appTable').dataTable().fnAddData(appDataArray);
+        }
+    });
+}
+
 function loadFileTable()
 {
 	callMenu("#files");
@@ -834,6 +856,29 @@ function closeRoleForm() {
 	loadRoleTable();
 }
 
+function addApp()
+{
+    var appName = $("#txtAppname").val();
+
+    BBRoutes.com.baasbox.controllers.Application.addApp().ajax(
+
+        {
+            data: JSON.stringify({"appname": appName}),
+            contentType: "application/json",
+            processData: false,
+            error: function(data)
+            {
+                alert(JSON.parse(data.responseText)["message"]);
+            },
+            success: function(data)
+            {
+                closeAppForm();
+            }
+        })
+
+
+}
+
 function addUser()
 {
 	var userName = $("#txtUsername").val();
@@ -898,6 +943,12 @@ function updateUser()
 					closeUserForm();
 				}
 			})
+}
+
+function closeAppForm()
+{
+    $('#addAppModal').modal('hide');
+    loadAppTable()
 }
 
 function closeUserForm()
@@ -1012,6 +1063,32 @@ $('.btn-DocumentReload').click(function(e){
 			});
 	return;
 }); // Validate and Ajax submit for reload document
+
+$('.btn-AppCommit').click(function(e){
+    var action = "Insert";
+
+    var appName = $("#txtAppname").val();
+
+    var errorMessage = '';
+
+    if($.trim(appName) == "")
+        errorMessage = "The 'Appname' field is required<br/>"
+
+    if(errorMessage != "")
+    {
+        $("#errorAddApp").html(errorMessage);
+        $("#errorAddApp").removeClass("hide");
+        return;
+    }
+
+    if(action == "Insert")
+        addApp();
+    else
+
+    return;
+
+
+}); // Validate and Ajax submit for Insert/Update App
 
 $('.btn-UserCommit').click(function(e){
     var action;
@@ -2309,12 +2386,12 @@ function callMenu(action){
 	case "#collections":
 		var collections = [];
 		var ref = function(coll){
-			//console.debug("refreshing",coll);
-			collections = coll;
-			applySuccessMenu(action,collections);
-			$('#collectionTable').dataTable().fnClearTable();
-			$('#collectionTable').dataTable().fnAddData(collections);
-		}
+        //console.debug("refreshing",coll);
+        collections = coll;
+        applySuccessMenu(action,collections);
+        $('#collectionTable').dataTable().fnClearTable();
+        $('#collectionTable').dataTable().fnAddData(collections);
+    }
 		if(dbCollectionsCache){
 				collections = dbCollectionsCache;
 				ref(collections)
@@ -2421,8 +2498,8 @@ function tryToLogin(user, pass,appCode){
 			refreshSessionToken=setInterval(function(){BBRoutes.com.baasbox.controllers.Generic.refreshSessionToken().ajax();},300000);
 			var scope=$("#loggedIn").scope();
 			scope.$apply(function(){
-				scope.loggedIn=true;
-			});
+                scope.loggedIn=true;
+            });
 		},
 		error: function() {
 			$("#errorLogin").removeClass("hide");
@@ -2706,6 +2783,10 @@ function DashboardController($scope) {
 	$scope.formatSize = function(size){
 		return bytesToSize(size,2);
 	}
+
+}
+
+function AppController($scope){
 
 }
 

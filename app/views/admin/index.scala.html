@@ -44,10 +44,12 @@
 </head>
 
 <body>
-	@noscript()
+	@admin.noscript()
 	<!-- --------- -->
 	<input id="loggedIn" type="hidden" ng-model="loggedIn"   ng-init="loggedIn=false"/>
+    <input id="appSelected" type="hidden" ng-model="appSelected"   ng-init="appSelected=false"/>
 	@admin.login(version,edition)
+    @admin.app(version,edition)
 	@admin.main(version,edition)
 
 

@@ -1,0 +1,46 @@
+@(version: String, edition: String)
+<div style="display : none" ng-show="loggedIn" id="appManagerPage" ng-controller="AppController">
+    @admin.main_.topbar(version, edition)
+
+        <div class="container-fluid bb-app-container">
+            <div class="row-fluid">
+            @admin.noscript()
+    <h1> This is the app management view </h1>
+
+    <div class="box span11">
+        <div data-rel="tooltip" title="Apps currently managed by BaasBox" class="box-header well" >
+            <h2><i class="icon-user"></i> Apps</h2>
+            <div class="box-icon">
+
+                <a href="#" class="btn btn-round btn-addapp"><i class="icon-plus-sign"></i></a>
+                <a href="#" class="btn btn-minimize btn-round"><i class="icon-chevron-up"></i></a>
+            </div>
+        </div>
+        <div class="box-content">
+            <table id="appTable" class="table table-striped table-hover table-bordered bootstrap-datatable datatable">
+                <thead>
+                    <tr>
+                        <th data-rel="tooltip" title="The app number">#</th>
+                        <th data-rel="tooltip" title="The username. It must be unique for each user">Appname</th>
+                        <th data-rel="tooltip" title="Action allowed on each user">Actions</th>
+                    </tr>
+                </thead>
+            </table>
+        </div><!-- box-content -->
+    </div> <!--  box span12 -->
+
+</div> <!-- /row-fluid -->
+
+
+</div> <!-- /container-fluid -->
+
+
+    <div class="modal hide" id="freezeConsole__">
+        <div class="modal-header">
+            <h2>Please wait...</h2>
+        </div>
+        <div class="modal-body">
+        </div>
+    </div>
+
+</div>

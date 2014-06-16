@@ -1,0 +1,42 @@
+<!-- Add/Edit App starts -->
+	<div class="modal hide fade" id="addAppModal">
+		<div class="modal-header">
+			<button type="button" class="close" data-dismiss="modal">×</button>
+			<h3 id="appTitle">Add/Edit App</h3>
+		</div>
+		<div class="modal-body">
+			<div class="row-fluid">
+			<div class="box span12" id="AppForm">
+					<div class="box-content">
+						<form class="form-horizontal" id="appForm">
+						<div class="alert alert-info">
+							Please enter the app information
+						</div>
+						<p class="hint">
+							Provide the required information to create/modify a app profile.
+						</p>
+							<fieldset>
+								<div id="errorAddApp" class="alert alert-error hide">
+
+								</div>
+								<div id="errorAddApp2" class="control-group error hide" >
+									 <span class="help-inline" id="errorAddAppMessage"></span>
+								</div>							
+							  <div class="control-group">
+								<label class="control-label" for="txtAppname">Appname*</label>
+								<div class="controls">
+								  <input class="input-xlarge focused" id="txtAppname" type="text" value="" required>
+								</div>
+							  </div>
+							</fieldset>
+						  </form>
+					</div>
+				</div><!--/span-->
+		</div><!--/row-->
+		</div>
+		<div class="modal-footer">
+			<a href="#" class="btn" data-dismiss="modal">Close</a>
+			<a href="#" class="btn btn-primary btn-AppCommit">Save changes</a>
+		</div>
+	</div>
+	<!-- Add/Edit User ends -->

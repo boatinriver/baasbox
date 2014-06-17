@@ -125,3 +125,4 @@ create class _BB_App extends _BB_Node;
 create property _BB_App.name string;
 alter property _BB_App.name mandatory=true;
 alter property _BB_App.name notnull=true;
+create index _BB_App.name unique;

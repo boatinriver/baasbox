@@ -83,7 +83,7 @@ public class AppDao extends NodeDao {
 //            //delete all vertices linked to objects in this class
 //            String deleteVertices =
 //                    "delete vertex _bb_nodevertex where _node.@class=?";
-//            Object[] params={name};
+            Object[] params={name};
 //            gdao.executeCommand(deleteVertices, params);
 
 //            //delete vertices linked to the collection entry in the _bb_collection class

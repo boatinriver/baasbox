@@ -26,7 +26,7 @@ create property _BB_User.visibleByRegisteredUsers link _BB_UserAttributes;
 create property _BB_User.visibleByFriend link _BB_UserAttributes;
 create property _BB_User.visibleByTheUser link _BB_UserAttributes;
 create property _BB_User._audit embedded;
-create property _BB_User.c link ouser;
+create property _BB_User.user link ouser;
 
 
 --admin user

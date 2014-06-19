@@ -82,4 +82,11 @@ public class CollectionService {
         return dao.getByName(appName, collectionName);
     }
 
+    public static String[] transName(String name) {
+        int index = name.indexOf("_");
+        String[] str = new String[2];
+        str[0] = name.substring(0, index);
+        str[1] = name.substring(index+1, name.length());
+        return str;
+    }
 }

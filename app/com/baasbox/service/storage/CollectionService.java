@@ -54,9 +54,32 @@ public class CollectionService {
 		CollectionDao dao = CollectionDao.getInstance();
 		return dao.get(criteria);
 	}
-	
+
 	public static long getCollectionsCount(QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
 		CollectionDao dao = CollectionDao.getInstance();
 		return dao.getCount(criteria);
 	}
+
+
+    public static void drop(String appName, String collectionName) throws InvalidCollectionException, SqlInjectionException, Exception{
+        CollectionDao dao = CollectionDao.getInstance();
+        dao.delete(appName, collectionName);
+    }
+
+    public static ODocument create(String appName, String collectionName) throws Throwable, InvalidCollectionException, InvalidModelException{
+        CollectionDao dao = CollectionDao.getInstance();
+        ODocument doc=dao.create(appName, collectionName);
+        return doc;
+    }
+
+    public static boolean exists(String appName, String collectionName) throws InvalidCollectionException, SqlInjectionException{
+        CollectionDao dao = CollectionDao.getInstance();
+        return dao.existsCollection(appName, collectionName);
+    }
+
+    public static ODocument get(String appName, String collectionName) throws SqlInjectionException {
+        CollectionDao dao = CollectionDao.getInstance();
+        return dao.getByName(appName, collectionName);
+    }
+
 }

@@ -39,6 +39,10 @@ public class CollectionDao extends NodeDao {
 	public static CollectionDao getInstance(){
 		return new CollectionDao();
 	}
+
+    public static String getCollectionName(String appName, String collectionName) {
+        return appName + "_" + collectionName;
+    }
 	
 	protected CollectionDao() {
 		super(MODEL_NAME);
@@ -89,6 +93,42 @@ public class CollectionDao extends NodeDao {
 		if (Logger.isTraceEnabled()) Logger.trace("Method End");
 		return doc;
 	}//getNewModelInstance(String collectionName)
+
+    public ODocument create(String appName, String collectionName) throws Throwable {
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        String name = CollectionDao.getCollectionName(appName, collectionName);
+        try {
+            if (existsCollection(appName, collectionName)) throw new CollectionAlreadyExistsException("Collection " + collectionName + " already exists");
+        }catch (SqlInjectionException e){
+            throw new InvalidCollectionException(e);
+        }
+        if (Character.isDigit(collectionName.charAt(0))){
+            throw new InvalidCollectionException("Collection names cannot start by a digit");
+        }
+        ODocument doc = super.create();
+        doc.field("name",name);
+        if(collectionName.toUpperCase().startsWith("_BB_")){
+            throw new InvalidCollectionException("Collection name is not valid: it can't be prefixed with _BB_");
+        }
+        save(doc);
+
+        //create new class
+        OClass documentClass = db.getMetadata().getSchema().getClass(CLASS_NODE_NAME);
+        db.getMetadata().getSchema().createClass(name, documentClass);
+
+        //grants to the new class
+        ORole registeredRole = RoleDao.getRole(DefaultRoles.REGISTERED_USER.toString());
+        ORole anonymousRole = RoleDao.getRole(DefaultRoles.ANONYMOUS_USER.toString());
+        registeredRole.addRule(ODatabaseSecurityResources.CLASS + "." + name, ORole.PERMISSION_ALL);
+        registeredRole.addRule(ODatabaseSecurityResources.CLUSTER + "." + name, ORole.PERMISSION_ALL);
+        anonymousRole.addRule(ODatabaseSecurityResources.CLASS + "." + name, ORole.PERMISSION_READ);
+        anonymousRole.addRule(ODatabaseSecurityResources.CLUSTER + "." + name, ORole.PERMISSION_READ);
+        PermissionsHelper.grantRead(doc, registeredRole);
+        PermissionsHelper.grantRead(doc, anonymousRole);
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+
+        return doc;
+    }
 	
 	public boolean existsCollection(String collectionName) throws SqlInjectionException{
 		if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -97,6 +137,15 @@ public class CollectionDao extends NodeDao {
 		if (Logger.isTraceEnabled()) Logger.trace("Method End");
 		return (record!=null) ;
 	}
+
+    public boolean existsCollection(String appName, String collectionName) throws SqlInjectionException{
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        String name = CollectionDao.getCollectionName(appName, collectionName);
+        OIndex idx = db.getMetadata().getIndexManager().getIndex(COLLECTION_NAME_INDEX);
+        OIdentifiable record = (OIdentifiable) idx.get( name );
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        return (record!=null) ;
+    }
 	
 	public ODocument getByName(String collectionName) throws SqlInjectionException{
 		if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -105,6 +154,15 @@ public class CollectionDao extends NodeDao {
 		if (record==null) return null;
 		return db.load(record.getIdentity());
 	}
+
+    public ODocument getByName(String appName, String collectionName) throws SqlInjectionException{
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        String name = CollectionDao.getCollectionName(appName, collectionName);
+        OIndex idx = db.getMetadata().getIndexManager().getIndex(COLLECTION_NAME_INDEX);
+        OIdentifiable record = (OIdentifiable) idx.get( name );
+        if (record==null) return null;
+        return db.load(record.getIdentity());
+    }
 	
 	@Override
 	public void delete(String name) throws Exception{
@@ -153,4 +211,52 @@ public class CollectionDao extends NodeDao {
 			throw e;
 		}
 	}//delete
+
+    public void delete(String appName, String collectionName) throws Exception {
+        String name = CollectionDao.getCollectionName(appName, collectionName);
+        if (!existsCollection(appName, collectionName)) throw new InvalidCollectionException("Collection " + name + " does not exists");
+
+        //get the helper class
+        GenericDao gdao = GenericDao.getInstance();
+
+        //begin transaction
+        DbHelper.requestTransaction();
+
+        try {
+            //delete all vertices linked to objects in this class
+            String deleteVertices =
+                    "delete vertex _bb_nodevertex where _node.@class=?";
+            Object[] params={name};
+            gdao.executeCommand(deleteVertices, params);
+
+            //delete vertices linked to the collection entry in the _bb_collection class
+            //note: the params are equals to the previous one (just the collection name)
+            String deleteVertices2="delete vertex _bb_nodevertex where _node.@class='_bb_collection' and _node.name=?";
+            gdao.executeCommand(deleteVertices2, params);
+
+
+            //delete this collection from the list of declared collections
+            //note: the params are equals to the previous one (just the collection name)
+            String deleteFromCollections= "delete from _bb_collection where name =?";
+            gdao.executeCommand(deleteFromCollections, params);
+
+            //delete all records belonging to the dropping collection....
+            //it could be done dropping the class, but in this case we not should be able to perform a rollback
+            String deleteAllRecords= "delete from " + name;
+            gdao.executeCommand(deleteAllRecords, new Object[] {});
+
+            //commit
+            DbHelper.commitTransaction();
+
+            //drop the collection class
+            String dropCollection= "drop class " + name;
+            gdao.executeCommand(dropCollection, new Object[] {});
+
+        } catch (Exception e) {
+            //rollback in case of error
+            DbHelper.rollbackTransaction();
+            if (Logger.isDebugEnabled()) Logger.debug ("An error occured deleting the collection " + name, e);
+            throw e;
+        }
+    }
 }

@@ -92,7 +92,7 @@ public class CollectionService {
 
     public static List<ODocument> getCollections(String appName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
         CollectionDao dao = CollectionDao.getInstance();
-        criteria.where("name = '"+appName+"%'");
+        criteria.where("name like '"+appName+"%'");
         return dao.get(criteria);
     }
 

@@ -89,4 +89,15 @@ public class CollectionService {
         str[1] = name.substring(index+1, name.length());
         return str;
     }
+
+    public static List<ODocument> getCollections(String appName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
+        CollectionDao dao = CollectionDao.getInstance();
+        criteria.where("name = '"+appName+"%'");
+        return dao.get(criteria);
+    }
+
+    public static long getCollectionsCount(String appName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
+        CollectionDao dao = CollectionDao.getInstance();
+        return dao.getCount(criteria);
+    }
 }

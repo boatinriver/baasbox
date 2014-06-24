@@ -16,6 +16,8 @@
  */
 package com.baasbox.dao;
 
+import com.baasbox.service.storage.BaasBoxPrivateFields;
+import com.baasbox.util.QueryParams;
 import play.Logger;
 
 import com.baasbox.dao.exception.CollectionAlreadyExistsException;
@@ -29,6 +31,8 @@ import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.security.ODatabaseSecurityResources;
 import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.record.impl.ODocument;
+
+import java.util.List;
 
 
 public class CollectionDao extends NodeDao {
@@ -105,8 +109,11 @@ public class CollectionDao extends NodeDao {
         if (Character.isDigit(collectionName.charAt(0))){
             throw new InvalidCollectionException("Collection names cannot start by a digit");
         }
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+
         ODocument doc = super.create();
         doc.field("name",name);
+        doc.field("appid",appDoc.field(BaasBoxPrivateFields.ID.toString()));
         if(collectionName.toUpperCase().startsWith("_BB_")){
             throw new InvalidCollectionException("Collection name is not valid: it can't be prefixed with _BB_");
         }
@@ -140,11 +147,20 @@ public class CollectionDao extends NodeDao {
 
     public boolean existsCollection(String appName, String collectionName) throws SqlInjectionException{
         if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        String name = CollectionDao.getCollectionName(appName, collectionName);
-        OIndex idx = db.getMetadata().getIndexManager().getIndex(COLLECTION_NAME_INDEX);
-        OIdentifiable record = (OIdentifiable) idx.get( name );
+//        String name = CollectionDao.getCollectionName(appName, collectionName);
+//        OIndex idx = db.getMetadata().getIndexManager().getIndex(COLLECTION_NAME_INDEX);
+//        OIdentifiable record = (OIdentifiable) idx.get( name );
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+
+        GenericDao gdao = GenericDao.getInstance();
+        String where = "appid='"+appID+"' and name='"+collectionName+"'";
+        QueryParams qp = QueryParams.getInstance();
+        qp.where("appid=? and name=?").params(new String[]{appID, collectionName});
+        List<ODocument> collections = gdao.executeQuery(MODEL_NAME, qp);
+
         if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return (record!=null) ;
+        return (collections.size() > 0) ;
     }
 	
 	public ODocument getByName(String collectionName) throws SqlInjectionException{
@@ -157,17 +173,23 @@ public class CollectionDao extends NodeDao {
 
     public ODocument getByName(String appName, String collectionName) throws SqlInjectionException{
         if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        String name = CollectionDao.getCollectionName(appName, collectionName);
-        OIndex idx = db.getMetadata().getIndexManager().getIndex(COLLECTION_NAME_INDEX);
-        OIdentifiable record = (OIdentifiable) idx.get( name );
-        if (record==null) return null;
-        return db.load(record.getIdentity());
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+
+        GenericDao gdao = GenericDao.getInstance();
+        String where = "appid='"+appID+"' and name='"+collectionName+"'";
+        QueryParams qp = QueryParams.getInstance();
+        qp.where("appid=? and name=?").params(new String[]{appID, collectionName});
+        List<ODocument> collections = gdao.executeQuery(MODEL_NAME, qp);
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        if (collections.size() == 0) return null;
+        return collections.get(0);
     }
 	
 	@Override
 	public void delete(String name) throws Exception{
 		if (!existsCollection(name)) throw new InvalidCollectionException("Collection " + name + " does not exists");
-		
+
 		//get the helper class
 		GenericDao gdao = GenericDao.getInstance();
 		
@@ -216,6 +238,9 @@ public class CollectionDao extends NodeDao {
         String name = CollectionDao.getCollectionName(appName, collectionName);
         if (!existsCollection(appName, collectionName)) throw new InvalidCollectionException("Collection " + name + " does not exists");
 
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+
         //get the helper class
         GenericDao gdao = GenericDao.getInstance();
 
@@ -231,14 +256,15 @@ public class CollectionDao extends NodeDao {
 
             //delete vertices linked to the collection entry in the _bb_collection class
             //note: the params are equals to the previous one (just the collection name)
-            String deleteVertices2="delete vertex _bb_nodevertex where _node.@class='_bb_collection' and _node.name=?";
-            gdao.executeCommand(deleteVertices2, params);
+            String deleteVertices2="delete vertex _bb_nodevertex where _node.@class='_bb_collection' and _node.name=? and _node.appid=?";
+            Object[] params1={collectionName, appID};
+            gdao.executeCommand(deleteVertices2, params1);
 
 
             //delete this collection from the list of declared collections
             //note: the params are equals to the previous one (just the collection name)
-            String deleteFromCollections= "delete from _bb_collection where name =?";
-            gdao.executeCommand(deleteFromCollections, params);
+            String deleteFromCollections= "delete from _bb_collection where name =? and _node.appid=?";
+            gdao.executeCommand(deleteFromCollections, params1);
 
             //delete all records belonging to the dropping collection....
             //it could be done dropping the class, but in this case we not should be able to perform a rollback

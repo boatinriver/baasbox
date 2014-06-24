@@ -51,6 +51,9 @@ create class _BB_Collection extends _BB_Node;
 create property _BB_Collection.name String;
 alter property _BB_Collection.name mandatory=true;
 alter property _BB_Collection.name notnull=true;
+create property _BB_Collection.appid String;
+alter property _BB_Collection.appid mandatory=true;
+alter property _BB_Collection.appid notnull=true;
 
 --files
 create class _BB_File extends _BB_Node;
@@ -103,7 +106,8 @@ alter property _BB_Permissions.enabled notnull=true;
 --indices
 --deprecated since OrientDB 1.7:
 create index ouser.name unique;
-create index _BB_Collection.name unique;
+-- create index _BB_Collection.name unique;
+-- create index _BB_Collection.appid unique;
 create index _BB_asset.name unique;
 create index _BB_Node.id unique;
 create index _BB_Permissions.tag unique;

@@ -112,7 +112,7 @@ public class CollectionDao extends NodeDao {
         ODocument appDoc = AppDao.getInstance().getByName(appName);
 
         ODocument doc = super.create();
-        doc.field("name",name);
+        doc.field("name",collectionName);
         doc.field("appid",appDoc.field(BaasBoxPrivateFields.ID.toString()));
         if(collectionName.toUpperCase().startsWith("_BB_")){
             throw new InvalidCollectionException("Collection name is not valid: it can't be prefixed with _BB_");
@@ -154,7 +154,6 @@ public class CollectionDao extends NodeDao {
         String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
 
         GenericDao gdao = GenericDao.getInstance();
-        String where = "appid='"+appID+"' and name='"+collectionName+"'";
         QueryParams qp = QueryParams.getInstance();
         qp.where("appid=? and name=?").params(new String[]{appID, collectionName});
         List<ODocument> collections = gdao.executeQuery(MODEL_NAME, qp);

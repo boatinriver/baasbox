@@ -19,6 +19,7 @@ package com.baasbox.service.storage;
 
 import java.util.List;
 
+import com.baasbox.dao.AppDao;
 import com.baasbox.dao.CollectionDao;
 import com.baasbox.dao.exception.InvalidCollectionException;
 import com.baasbox.dao.exception.InvalidModelException;
@@ -91,8 +92,10 @@ public class CollectionService {
     }
 
     public static List<ODocument> getCollections(String appName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
         CollectionDao dao = CollectionDao.getInstance();
-        criteria.where("name like '"+appName+"%'");
+        criteria.where("appid=?").params(new String[]{appID});
         return dao.get(criteria);
     }
 

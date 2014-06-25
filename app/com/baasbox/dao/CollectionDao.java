@@ -176,7 +176,6 @@ public class CollectionDao extends NodeDao {
         String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
 
         GenericDao gdao = GenericDao.getInstance();
-        String where = "appid='"+appID+"' and name='"+collectionName+"'";
         QueryParams qp = QueryParams.getInstance();
         qp.where("appid=? and name=?").params(new String[]{appID, collectionName});
         List<ODocument> collections = gdao.executeQuery(MODEL_NAME, qp);

@@ -22,6 +22,7 @@ import com.baasbox.dao.exception.InvalidModelException;
 import com.baasbox.dao.exception.SqlInjectionException;
 import com.baasbox.enumerations.DefaultRoles;
 import com.baasbox.enumerations.Permissions;
+import com.baasbox.service.storage.BaasBoxPrivateFields;
 import com.baasbox.util.QueryParams;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
@@ -48,6 +49,16 @@ public class AssetDao extends NodeDao {
 		super.grantPermission(asset, Permissions.ALLOW_READ,DefaultRoles.getORoles());
 		return asset;
 	}
+
+    public ODocument create(String appName, String name) throws Throwable{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        ODocument asset=super.create();
+        asset.field("name",name);
+        asset.field("appid",appID);
+        super.grantPermission(asset, Permissions.ALLOW_READ,DefaultRoles.getORoles());
+        return asset;
+    }
 	
 	@Override
 	public  void save(ODocument document) throws InvalidModelException{
@@ -55,9 +66,18 @@ public class AssetDao extends NodeDao {
 	}
 	
 	public ODocument getByName (String name) throws SqlInjectionException{
-		QueryParams criteria=QueryParams.getInstance().where("name=?").params(new String[]{name});
-		List<ODocument> listOfAssets = this.get(criteria);
-		if (listOfAssets==null || listOfAssets.size()==0) return null;
-		return listOfAssets.get(0);
-	}
+        QueryParams criteria=QueryParams.getInstance().where("name=?").params(new String[]{name});
+        List<ODocument> listOfAssets = this.get(criteria);
+        if (listOfAssets==null || listOfAssets.size()==0) return null;
+        return listOfAssets.get(0);
+    }
+
+    public ODocument getByName (String appName, String name) throws SqlInjectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        QueryParams criteria=QueryParams.getInstance().where("name=? and appid=?").params(new String[]{name, appID});
+        List<ODocument> listOfAssets = this.get(criteria);
+        if (listOfAssets==null || listOfAssets.size()==0) return null;
+        return listOfAssets.get(0);
+    }
 }

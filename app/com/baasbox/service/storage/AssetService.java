@@ -19,6 +19,7 @@ package com.baasbox.service.storage;
 import java.io.IOException;
 import java.util.List;
 
+import com.baasbox.dao.AppDao;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 
 import com.baasbox.configuration.ImagesConfiguration;
@@ -57,6 +58,22 @@ public class AssetService {
 		}
 		return doc;
 	}
+
+    public static ODocument create(String appName, String name, String meta) throws Throwable{
+        AssetDao dao = AssetDao.getInstance();
+        ODocument doc=dao.create(appName, name);
+        try{
+
+            if (meta!=null && !meta.trim().isEmpty()) {
+                ODocument metaDoc=(new ODocument()).fromJSON("{ 'meta' : " + meta + "}");
+                doc.merge(metaDoc, true, false);
+            }
+            dao.save(doc);
+        }catch (Throwable e){
+            throw e;
+        }
+        return doc;
+    }
 	
 	public static ODocument createFile(String name,String fileName,String meta,String contentType, byte[] content) throws Throwable{
 		FileAssetDao dao = FileAssetDao.getInstance();
@@ -68,6 +85,17 @@ public class AssetService {
 		dao.save(doc);
 		return doc;
 	}
+
+    public static ODocument createFile(String appName, String name,String fileName,String meta,String contentType, byte[] content) throws Throwable{
+        FileAssetDao dao = FileAssetDao.getInstance();
+        ODocument doc=dao.create(appName, name,fileName,contentType,content);
+        if (meta!=null && !meta.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ 'meta' : " + meta + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
 	
 	public static ODocument get(String rid) throws SqlInjectionException, IllegalArgumentException, InvalidModelException, ODatabaseException, DocumentNotFoundException {
 		AssetDao dao = AssetDao.getInstance();
@@ -78,7 +106,11 @@ public class AssetService {
 		AssetDao dao = AssetDao.getInstance();
 		return dao.getByName(name);
 	}
-	
+
+    public static ODocument getByName(String appName, String name) throws SqlInjectionException, IllegalArgumentException, InvalidModelException {
+        AssetDao dao = AssetDao.getInstance();
+        return dao.getByName(appName, name);
+    }
 
 	
 	public static ByteArrayOutputStream getFileAsStream (String fileAssetName) throws SqlInjectionException, IOException{
@@ -90,20 +122,44 @@ public class AssetService {
 		record.toOutputStream(out);
 		return out;
 	}
+
+    public static ByteArrayOutputStream getFileAsStream (String appName, String fileAssetName) throws SqlInjectionException, IOException{
+        FileAssetDao dao = FileAssetDao.getInstance();
+        ODocument fileAsset=dao.getByName(appName, fileAssetName);
+        if (fileAsset==null) return null;
+        ORecordBytes record = fileAsset.field("file");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        record.toOutputStream(out);
+        return out;
+    }
 	
 	public static ByteArrayOutputStream getPictureAsStream (String fileAssetName) throws SqlInjectionException, IOException{
-		return getFileAsStream (fileAssetName);
-	}
+        return getFileAsStream (fileAssetName);
+    }
+
+    public static ByteArrayOutputStream getPictureAsStream (String appName, String fileAssetName) throws SqlInjectionException, IOException{
+        return getFileAsStream (appName, fileAssetName);
+    }
 	
-	public static byte[] getResizedPicture (String fileAssetName, String width, String height) throws SqlInjectionException, IOException, DocumentIsNotAnImageException, DocumentIsNotAFileException, InvalidSizePatternException{
-		String sizePattern = width + "-" + height;
-		return getResizedPicture (fileAssetName,sizePattern);
-	}
+//	public static byte[] getResizedPicture (String fileAssetName, String width, String height) throws SqlInjectionException, IOException, DocumentIsNotAnImageException, DocumentIsNotAFileException, InvalidSizePatternException{
+//		String sizePattern = width + "-" + height;
+//		return getResizedPicture (fileAssetName,sizePattern);
+//	}
+
+    public static byte[] getResizedPicture (String appName, String fileAssetName, String width, String height) throws SqlInjectionException, IOException, DocumentIsNotAnImageException, DocumentIsNotAFileException, InvalidSizePatternException{
+        String sizePattern = width + "-" + height;
+        return getResizedPicture (appName, fileAssetName,sizePattern);
+    }
 	
 	public static byte[] getResizedPictureInPerc (String fileAssetName, String sizeInPerc) throws SqlInjectionException, IOException, DocumentIsNotAnImageException, DocumentIsNotAFileException, InvalidSizePatternException, OperationDisabledException{
-		if (!sizeInPerc.endsWith("%")) throw new InvalidSizePatternException();
-		return getResizedPicture (fileAssetName,sizeInPerc);
-	}
+        if (!sizeInPerc.endsWith("%")) throw new InvalidSizePatternException();
+        return getResizedPicture (fileAssetName,sizeInPerc);
+    }
+
+    public static byte[] getResizedPictureInPerc (String appName, String fileAssetName, String sizeInPerc) throws SqlInjectionException, IOException, DocumentIsNotAnImageException, DocumentIsNotAFileException, InvalidSizePatternException, OperationDisabledException{
+        if (!sizeInPerc.endsWith("%")) throw new InvalidSizePatternException();
+        return getResizedPicture (appName, fileAssetName,sizeInPerc);
+    }
 	
 	public static byte[] getResizedPicture (String fileAssetName, int sizeId) throws SqlInjectionException, IOException, InvalidSizePatternException, DocumentIsNotAnImageException, DocumentIsNotAFileException, OperationDisabledException{
 		String sizePattern = "";
@@ -114,6 +170,16 @@ public class AssetService {
 		}
 		return getResizedPicture (fileAssetName,sizePattern);
 	}
+
+    public static byte[] getResizedPicture (String appName, String fileAssetName, int sizeId) throws SqlInjectionException, IOException, InvalidSizePatternException, DocumentIsNotAnImageException, DocumentIsNotAFileException, OperationDisabledException{
+        String sizePattern = "";
+        try{
+            sizePattern=ImagesConfiguration.IMAGE_ALLOWED_AUTOMATIC_RESIZE_FORMATS.getValueAsString().split(" ")[sizeId];
+        }catch (IndexOutOfBoundsException e){
+            throw new InvalidSizePatternException("The specified id is out of range.");
+        }
+        return getResizedPicture (appName, fileAssetName,sizePattern);
+    }
 	
 	public static byte[] getResizedPicture (String fileAssetName, String sizePattern) throws SqlInjectionException, IOException, InvalidSizePatternException, DocumentIsNotAnImageException, DocumentIsNotAFileException{
 		if (!ImagesConfiguration.IMAGE_ALLOWED_AUTOMATIC_RESIZE_FORMATS.getValueAsString().contains(sizePattern))
@@ -122,6 +188,12 @@ public class AssetService {
 		return getResizedPicture (fileAssetName,dimensions);
 	}
 
+    public static byte[] getResizedPicture (String appName, String fileAssetName, String sizePattern) throws SqlInjectionException, IOException, InvalidSizePatternException, DocumentIsNotAnImageException, DocumentIsNotAFileException{
+        if (!ImagesConfiguration.IMAGE_ALLOWED_AUTOMATIC_RESIZE_FORMATS.getValueAsString().contains(sizePattern))
+            throw new InvalidSizePatternException("The requested resize format is not allowed");
+        ImageDimensions dimensions = StorageUtils.convertPatternToDimensions(sizePattern);
+        return getResizedPicture (appName, fileAssetName,dimensions);
+    }
 	
 	private static byte[] getResizedPicture(String fileAssetName, ImageDimensions dimensions) throws SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, IOException, InvalidSizePatternException {
 		//load the document
@@ -155,7 +227,37 @@ public class AssetService {
 		}
 	}
 
+    private static byte[] getResizedPicture(String appName, String fileAssetName, ImageDimensions dimensions) throws SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, IOException, InvalidSizePatternException {
+        //load the document
+        FileAssetDao dao = FileAssetDao.getInstance();
+        ODocument asset=dao.getByName(appName, fileAssetName);
+        if (asset==null) return null;
+        if (!StorageUtils.docIsAnImage(asset)) throw new DocumentIsNotAnImageException();
 
+        //check if the image has been previously resized
+        String sizePattern= dimensions.toString();
+        try{
+            byte[] resizedImage = dao.getStoredResizedPicture(asset,  sizePattern);
+            if (resizedImage!=null) return resizedImage;
+
+            ByteArrayOutputStream fileContent = StorageUtils.extractFileFromDoc(asset);
+            String contentType = getContentType(asset);
+            String ext = contentType.substring(contentType.indexOf("/")+1);
+            WritebleImageFormat format;
+            try{
+                format = WritebleImageFormat.valueOf(ext);
+            }catch (Exception e){
+                format= WritebleImageFormat.png;
+            }
+            resizedImage=StorageUtils.resizeImage(fileContent.toByteArray(), format, dimensions);
+
+            //save the resized image for future requests
+            dao.storeResizedPicture(asset, sizePattern, resizedImage);
+            return resizedImage;
+        }catch ( InvalidModelException e) {
+            throw new RuntimeException("A very strange error occurred! ",e);
+        }
+    }
 
 	public static String getContentType(ODocument asset) {
 		return (String) asset.field("contentType");
@@ -165,11 +267,27 @@ public class AssetService {
 		AssetDao dao = AssetDao.getInstance();
 		return dao.getCount(criteria);
 	}
+
+    public static long getCount(String appName, QueryParams criteria) throws InvalidCollectionException, SqlInjectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        AssetDao dao = AssetDao.getInstance();
+        criteria.where("appid=?").params(new String[]{appID});
+        return dao.getCount(criteria);
+    }
 	
 	public static List<ODocument> getAssets(QueryParams criteria) throws SqlInjectionException{
 		AssetDao dao = AssetDao.getInstance();
 		return dao.get(criteria);
 	}
+
+    public static List<ODocument> getAssets(String appName, QueryParams criteria) throws SqlInjectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        criteria.where("appid=?").params(new String[]{appID});
+        AssetDao dao = AssetDao.getInstance();
+        return dao.get(criteria);
+    }
 	
 	public static void deleteByRid(String rid) throws Throwable {
 		AssetDao dao = AssetDao.getInstance();
@@ -178,11 +296,18 @@ public class AssetService {
 	public static void deleteByRid(ORID rid) throws Throwable {
 		AssetDao dao = AssetDao.getInstance();
 		dao.delete(rid);
-	}	
+	}
 	public static void deleteByName(String name) throws Throwable {
 		AssetDao dao = AssetDao.getInstance();
 		ODocument asset=getByName(name);
 		if (asset==null) throw new AssetNotFoundException();
 		dao.delete(asset.getIdentity());
-	}	
+	}
+
+    public static void deleteByName(String appName, String name) throws Throwable {
+        AssetDao dao = AssetDao.getInstance();
+        ODocument asset=getByName(appName, name);
+        if (asset==null) throw new AssetNotFoundException();
+        dao.delete(asset.getIdentity());
+    }
 }

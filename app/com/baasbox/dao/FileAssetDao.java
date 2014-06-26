@@ -24,6 +24,7 @@ import com.baasbox.dao.exception.InvalidModelException;
 import com.baasbox.dao.exception.SqlInjectionException;
 import com.baasbox.enumerations.DefaultRoles;
 import com.baasbox.enumerations.Permissions;
+import com.baasbox.service.storage.BaasBoxPrivateFields;
 import com.baasbox.util.QueryParams;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.impl.ODocument;
@@ -33,6 +34,7 @@ public class FileAssetDao extends NodeDao {
 	public final static String MODEL_NAME="_BB_FileAsset";
 	public final static String BINARY_FIELD_NAME = "file";
 	public final static String CONTENT_TYPE_FIELD_NAME="contentType";
+    public final static String APP_ID = "appid";
 	
 	protected FileAssetDao(String modelName) {
 		super(modelName);
@@ -60,6 +62,22 @@ public class FileAssetDao extends NodeDao {
 		super.grantPermission(asset, Permissions.ALLOW_UPDATE,DefaultRoles.getORoles()); //this is necessary due the resize API
 		return asset;
 	}
+
+    public ODocument create(String appName, String name, String fileName, String contentType, byte[] content) throws Throwable{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        ODocument asset=super.create();
+        ORecordBytes record = new ORecordBytes(content);
+        asset.field(BINARY_FIELD_NAME,record);
+        asset.field("name",name);
+        asset.field("fileName",fileName);
+        asset.field("contentType",contentType);
+        asset.field("contentLength",content.length);
+        asset.field("appid",appID);
+        super.grantPermission(asset, Permissions.ALLOW_READ,DefaultRoles.getORoles());
+        super.grantPermission(asset, Permissions.ALLOW_UPDATE,DefaultRoles.getORoles()); //this is necessary due the resize API
+        return asset;
+    }
 	
 	public ODocument getByName (String name) throws SqlInjectionException{
 		QueryParams criteria=QueryParams.getInstance().where("name=?").params(new String[]{name});
@@ -67,6 +85,15 @@ public class FileAssetDao extends NodeDao {
 		if (listOfAssets==null || listOfAssets.size()==0) return null;
 		return listOfAssets.get(0);
 	}
+
+    public ODocument getByName (String appName, String name) throws SqlInjectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        QueryParams criteria=QueryParams.getInstance().where("name=? and appid=?").params(new String[]{name, appID});
+        List<ODocument> listOfAssets = this.get(criteria);
+        if (listOfAssets==null || listOfAssets.size()==0) return null;
+        return listOfAssets.get(0);
+    }
 	
 	public ORecordBytes getBinary(ODocument doc) throws InvalidModelException{
 		super.checkModelDocument(doc);

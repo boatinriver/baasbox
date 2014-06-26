@@ -261,7 +261,7 @@ public class CollectionDao extends NodeDao {
 
             //delete this collection from the list of declared collections
             //note: the params are equals to the previous one (just the collection name)
-            String deleteFromCollections= "delete from _bb_collection where name =? and _node.appid=?";
+            String deleteFromCollections= "delete from _bb_collection where name =? and appid=?";
             gdao.executeCommand(deleteFromCollections, params1);
 
             //delete all records belonging to the dropping collection....

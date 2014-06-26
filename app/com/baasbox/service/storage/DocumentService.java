@@ -19,15 +19,11 @@ package com.baasbox.service.storage;
 import java.security.InvalidParameterException;
 import java.util.List;
 
+import com.baasbox.dao.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.baasbox.dao.DocumentDao;
-import com.baasbox.dao.GenericDao;
-import com.baasbox.dao.NodeDao;
-import com.baasbox.dao.PermissionsHelper;
-import com.baasbox.dao.RoleDao;
 import com.baasbox.dao.exception.DocumentNotFoundException;
 import com.baasbox.dao.exception.InvalidCollectionException;
 import com.baasbox.dao.exception.InvalidCriteriaException;
@@ -140,10 +136,26 @@ public class DocumentService {
 		return dao.getCount(criteria);
 	}
 
+    public static long getCount(String appName, String collectionName, QueryParams criteria) throws InvalidCollectionException, SqlInjectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        criteria.where("appid=?").params(new String[]{appID});
+        DocumentDao dao = DocumentDao.getInstance(collectionName);
+        return dao.getCount(criteria);
+    }
+
 	public static List<ODocument> getDocuments(String collectionName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
 		DocumentDao dao = DocumentDao.getInstance(collectionName);
 		return dao.get(criteria);
 	}
+
+    public static List<ODocument> getDocuments(String appName, String collectionName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        criteria.where("appid=?").params(new String[]{appID});
+        DocumentDao dao = DocumentDao.getInstance(collectionName);
+        return dao.get(criteria);
+    }
 
 	/**
 	 * @param rid

@@ -132,13 +132,6 @@ public class FileDao extends NodeDao  {
 		super.save(document);
 	}
 
-    public  void save(String appName, ODocument document) throws InvalidModelException, SqlInjectionException{
-        ODocument appDoc = AppDao.getInstance().getByName(appName);
-        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
-        document.field(APP_ID, appID);
-        super.save(document);
-    }
-
 	public ODocument getById(String id) throws SqlInjectionException, InvalidModelException {
 		QueryParams criteria=QueryParams.getInstance().where("id=?").params(new String[]{id});
 		List<ODocument> listOfFiles = this.get(criteria);

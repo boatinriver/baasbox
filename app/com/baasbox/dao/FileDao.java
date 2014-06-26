@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.baasbox.service.storage.BaasBoxPrivateFields;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
 
@@ -46,6 +47,7 @@ public class FileDao extends NodeDao  {
 	public static final String METADATA_FIELD_NAME = "metadata";
 	private static final String FILE_CONTENT_CLASS = "_BB_FILE_CONTENT";
 	public static final String FILE_CONTENT_FIELD_NAME = "text_content";
+    public final static String APP_ID = "appid";
 	
 	protected FileDao(String modelName) {
 		super(modelName);
@@ -74,6 +76,10 @@ public class FileDao extends NodeDao  {
 	public ODocument create(String fileName, String contentType, long contentLength, InputStream content) throws Throwable{
 		return this.create(fileName, contentType, contentLength, content, null, null);
 	}
+
+    public ODocument create(String appName, String fileName, String contentType, long contentLength, InputStream content) throws Throwable{
+        return this.create(appName, fileName, contentType, contentLength, content, null, null);
+    }
 	
 	public ODocument create(String fileName, String contentType,
 			long contentLength, InputStream is, HashMap<String, ?> metadata,
@@ -95,6 +101,31 @@ public class FileDao extends NodeDao  {
 		}
 		return file;
 	}
+
+    public ODocument create(String appName, String fileName, String contentType,
+                            long contentLength, InputStream is, HashMap<String, ?> metadata,
+                            String contentString) throws Throwable {
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+
+        ODocument file=super.create();
+        ORecordBytes record = new ORecordBytes();
+        record.fromInputStream(is, (int) contentLength);
+        file.field(BINARY_FIELD_NAME,record);
+        file.field(FILENAME_FIELD_NAME,fileName);
+        file.field(CONTENT_TYPE_FIELD_NAME,contentType);
+        file.field(CONTENT_LENGTH_FIELD_NAME,new Long(contentLength));
+        if (metadata!=null){
+            ODocument doc = new ODocument();
+            doc = doc.fromJSON(new JSONObject(metadata).toString());
+            file.field(METADATA_FIELD_NAME,doc);
+        }
+        if (!StringUtils.isEmpty(contentString)){
+            file.field(FILE_CONTENT_FIELD_NAME,(new ODocument(FILE_CONTENT_CLASS)).field("content",contentString));
+        }
+        file.field(APP_ID, appID);
+        return file;
+    }
 	
 	@Override
 	public  void save(ODocument document) throws InvalidModelException{

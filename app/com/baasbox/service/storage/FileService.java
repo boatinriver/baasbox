@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import com.baasbox.dao.AppDao;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -57,248 +58,349 @@ import com.orientechnologies.orient.core.metadata.security.OUser;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 
 public class FileService {
-	public static final String DATA_FIELD_NAME="attachedData";
-	public static final String BINARY_FIELD_NAME=FileDao.BINARY_FIELD_NAME;
-	public final static String CONTENT_TYPE_FIELD_NAME=FileDao.CONTENT_TYPE_FIELD_NAME;
-	public final static String CONTENT_LENGTH_FIELD_NAME=FileDao.CONTENT_LENGTH_FIELD_NAME;
-	
-		public static ODocument createFile(String fileName,String data,String contentType, byte[] content) throws Throwable{
-			InputStream is = new ByteArrayInputStream(content); 
-			ODocument doc;
-			try {
-				doc=createFile(fileName,data,contentType, content.length , is);
-			}finally {
-				if (is != null)is.close();
-			}
-			return doc;
-		}
-		public static ODocument createFile(String fileName, String data,
-				String contentType, long contentLength, InputStream is,
-				HashMap<String,?> metadata, String contentString) throws Throwable {
-			FileDao dao = FileDao.getInstance();
-			ODocument doc=dao.create(fileName,contentType,contentLength,is,metadata,contentString);
-			if (data!=null && !data.trim().isEmpty()) {
-				ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
-				doc.merge(metaDoc, true, false);
-			}
-			dao.save(doc);
-			return doc;
-		}
-		
-		public static ODocument createFile(String fileName, String dataJson,
-				String aclJsonString, String contentType, long length,
-				InputStream is, HashMap<String, Object> extractedMetaData,
-				String extractedContent) throws Throwable {
-			ODocument doc = createFile(fileName, dataJson, contentType, length, is, extractedMetaData,
-					extractedContent);
-			//sets the permissions
-			ObjectMapper mapper = new ObjectMapper();
-			JsonNode aclJson=null;
-			try{
-				aclJson = mapper.readTree(aclJsonString);
-			}catch(JsonProcessingException e){
-				throw e;
-			}
-			Iterator<Entry<String, JsonNode>> itAction = aclJson.fields(); //read,update,delete
-			while (itAction.hasNext()){
-				Entry<String, JsonNode> nextAction = itAction.next();
-				String action = nextAction.getKey();
-				Permissions actionPermission = null;
-				if (action.equalsIgnoreCase("read"))
-					actionPermission=Permissions.ALLOW_READ;
-				else if (action.equalsIgnoreCase("update"))
-					actionPermission=Permissions.ALLOW_UPDATE;
-				else if (action.equalsIgnoreCase("delete"))
-					actionPermission=Permissions.ALLOW_DELETE;
-				else if (action.equalsIgnoreCase("all"))
-					actionPermission=Permissions.FULL_ACCESS;
-				
-				Iterator<Entry<String, JsonNode>> itUsersRoles = nextAction.getValue().fields();
+    public static final String DATA_FIELD_NAME="attachedData";
+    public static final String BINARY_FIELD_NAME=FileDao.BINARY_FIELD_NAME;
+    public final static String CONTENT_TYPE_FIELD_NAME=FileDao.CONTENT_TYPE_FIELD_NAME;
+    public final static String CONTENT_LENGTH_FIELD_NAME=FileDao.CONTENT_LENGTH_FIELD_NAME;
 
-				while (itUsersRoles.hasNext()){
-					 Entry<String, JsonNode> usersOrRoles = itUsersRoles.next();
-					 JsonNode listOfElements = usersOrRoles.getValue();
-					 if (listOfElements.isArray()) {
-						    for (final JsonNode element : listOfElements) {
-						       if (usersOrRoles.getKey().equalsIgnoreCase("users"))
-						    	   grantPermissionToUser((String)doc.field("id"), actionPermission, element.asText());
-						       else 
-						    	   grantPermissionToRole((String)doc.field("id"), actionPermission, element.asText());
-						    }
-					 }
-				}
-			}//set permissions
-			return doc;
-		}//createFile with permission
-		
-		
-		public static ODocument createFile(String fileName,String data,String contentType, long contentLength , InputStream content) throws Throwable{
-			FileDao dao = FileDao.getInstance();
-			ODocument doc=dao.create(fileName,contentType,contentLength,content); 	
-			if (data!=null && !data.trim().isEmpty()) {
-				ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
-				doc.merge(metaDoc, true, false);
-			}
-			dao.save(doc);
-			return doc;
-		}	
-		
-		public static ODocument createFile(String fileName,String data,String contentType, HashMap<String,?> metadata,long contentLength , InputStream content) throws Throwable{
-			FileDao dao = FileDao.getInstance();
-			ODocument doc=dao.create(fileName,contentType,contentLength,content); 
-			if (data!=null && !data.trim().isEmpty()) {
-				ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
-				doc.merge(metaDoc, true, false);
-			}
-			dao.save(doc);
-			return doc;
-		}
-		
-		public static ODocument getById(String id) throws SqlInjectionException, InvalidModelException {
-			FileDao dao = FileDao.getInstance();
-			return dao.getById(id);
-		}
-		
-		public static void deleteById(String id) throws Throwable, SqlInjectionException, FileNotFoundException{
-			FileDao dao = FileDao.getInstance();
-			ODocument file=getById(id);
-			if (file==null) throw new FileNotFoundException();
-			dao.delete(file.getIdentity());
-		}
+    public static ODocument createFile(String fileName,String data,String contentType, byte[] content) throws Throwable{
+        InputStream is = new ByteArrayInputStream(content);
+        ODocument doc;
+        try {
+            doc=createFile(fileName,data,contentType, content.length , is);
+        }finally {
+            if (is != null)is.close();
+        }
+        return doc;
+    }
 
+    public static ODocument createFile(String appName, String fileName,String data,String contentType, byte[] content) throws Throwable{
+        InputStream is = new ByteArrayInputStream(content);
+        ODocument doc;
+        try {
+            doc=createFile(appName, fileName,data,contentType, content.length , is);
+        }finally {
+            if (is != null)is.close();
+        }
+        return doc;
+    }
 
-		public static List<ODocument> getFiles(QueryParams criteria) throws SqlInjectionException {
-			FileDao dao = FileDao.getInstance();
-			return dao.get(criteria); 
-		}
+    public static ODocument createFile(String fileName, String data,
+                                       String contentType, long contentLength, InputStream is,
+                                       HashMap<String,?> metadata, String contentString) throws Throwable {
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(fileName,contentType,contentLength,is,metadata,contentString);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
 
+    public static ODocument createFile(String appName, String fileName, String data,
+                                       String contentType, long contentLength, InputStream is,
+                                       HashMap<String,?> metadata, String contentString) throws Throwable {
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(fileName,contentType,contentLength,is,metadata,contentString);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
 
-		public static ODocument grantPermissionToRole(String id,Permissions permission, String rolename) 
-				throws RoleNotFoundException, FileNotFoundException, SqlInjectionException, InvalidModelException {
-			ORole role=RoleDao.getRole(rolename);
-			if (role==null) throw new RoleNotFoundException(rolename);
-			ODocument doc = getById(id);
-			if (doc==null) throw new FileNotFoundException(id);
-			return PermissionsHelper.grant(doc, permission, role);
-		}
+//    public static ODocument createFile(String fileName, String dataJson,
+//                                       String aclJsonString, String contentType, long length,
+//                                       InputStream is, HashMap<String, Object> extractedMetaData,
+//                                       String extractedContent) throws Throwable {
+//        ODocument doc = createFile(fileName, dataJson, contentType, length, is, extractedMetaData,
+//                extractedContent);
+//        //sets the permissions
+//        ObjectMapper mapper = new ObjectMapper();
+//        JsonNode aclJson=null;
+//        try{
+//            aclJson = mapper.readTree(aclJsonString);
+//        }catch(JsonProcessingException e){
+//            throw e;
+//        }
+//        Iterator<Entry<String, JsonNode>> itAction = aclJson.fields(); //read,update,delete
+//        while (itAction.hasNext()){
+//            Entry<String, JsonNode> nextAction = itAction.next();
+//            String action = nextAction.getKey();
+//            Permissions actionPermission = null;
+//            if (action.equalsIgnoreCase("read"))
+//                actionPermission=Permissions.ALLOW_READ;
+//            else if (action.equalsIgnoreCase("update"))
+//                actionPermission=Permissions.ALLOW_UPDATE;
+//            else if (action.equalsIgnoreCase("delete"))
+//                actionPermission=Permissions.ALLOW_DELETE;
+//            else if (action.equalsIgnoreCase("all"))
+//                actionPermission=Permissions.FULL_ACCESS;
+//
+//            Iterator<Entry<String, JsonNode>> itUsersRoles = nextAction.getValue().fields();
+//
+//            while (itUsersRoles.hasNext()){
+//                Entry<String, JsonNode> usersOrRoles = itUsersRoles.next();
+//                JsonNode listOfElements = usersOrRoles.getValue();
+//                if (listOfElements.isArray()) {
+//                    for (final JsonNode element : listOfElements) {
+//                        if (usersOrRoles.getKey().equalsIgnoreCase("users"))
+//                            grantPermissionToUser((String)doc.field("id"), actionPermission, element.asText());
+//                        else
+//                            grantPermissionToRole((String)doc.field("id"), actionPermission, element.asText());
+//                    }
+//                }
+//            }
+//        }//set permissions
+//        return doc;
+//    }//createFile with permission
 
+    public static ODocument createFile(String appName, String fileName, String dataJson,
+                                       String aclJsonString, String contentType, long length,
+                                       InputStream is, HashMap<String, Object> extractedMetaData,
+                                       String extractedContent) throws Throwable {
+        ODocument doc = createFile(appName, fileName, dataJson, contentType, length, is, extractedMetaData,
+                extractedContent);
+        //sets the permissions
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode aclJson=null;
+        try{
+            aclJson = mapper.readTree(aclJsonString);
+        }catch(JsonProcessingException e){
+            throw e;
+        }
+        Iterator<Entry<String, JsonNode>> itAction = aclJson.fields(); //read,update,delete
+        while (itAction.hasNext()){
+            Entry<String, JsonNode> nextAction = itAction.next();
+            String action = nextAction.getKey();
+            Permissions actionPermission = null;
+            if (action.equalsIgnoreCase("read"))
+                actionPermission=Permissions.ALLOW_READ;
+            else if (action.equalsIgnoreCase("update"))
+                actionPermission=Permissions.ALLOW_UPDATE;
+            else if (action.equalsIgnoreCase("delete"))
+                actionPermission=Permissions.ALLOW_DELETE;
+            else if (action.equalsIgnoreCase("all"))
+                actionPermission=Permissions.FULL_ACCESS;
 
-		public static ODocument revokePermissionToRole(String id,
-				Permissions permission, String rolename) throws RoleNotFoundException, FileNotFoundException, SqlInjectionException, InvalidModelException  {
-			ORole role=RoleDao.getRole(rolename);
-			if (role==null) throw new RoleNotFoundException(rolename);
-			ODocument doc = getById(id);
-			if (doc==null) throw new FileNotFoundException(id);
-			return PermissionsHelper.revoke(doc, permission, role);
-		}	
-		
-		public static ODocument grantPermissionToUser(String id, Permissions permission, String username) throws UserNotFoundException, RoleNotFoundException, FileNotFoundException, SqlInjectionException, IllegalArgumentException, InvalidModelException  {
-			OUser user=UserService.getOUserByUsername(username);
-			if (user==null) throw new UserNotFoundException(username);
-			ODocument doc = getById(id);
-			if (doc==null) throw new FileNotFoundException(id);
-			return PermissionsHelper.grant(doc, permission, user);
-		}
+            Iterator<Entry<String, JsonNode>> itUsersRoles = nextAction.getValue().fields();
 
-		public static ODocument revokePermissionToUser(String id, Permissions permission, String username) throws UserNotFoundException, RoleNotFoundException, FileNotFoundException, SqlInjectionException, IllegalArgumentException, InvalidModelException {
-			OUser user=UserService.getOUserByUsername(username);
-			if (user==null) throw new UserNotFoundException(username);
-			ODocument doc = getById(id);
-			if (doc==null) throw new FileNotFoundException(id);
-			return PermissionsHelper.revoke(doc, permission, user);
-		}
-		
-		/**
-		 * 
-		 * @param id
-		 * @param width The desired width. It can be expressed both in pixel or in percentage (100px, or 20%)
-		 * @param height The desired height. It can be expressed both in pixel or in percentage (100px, or 20%)
-		 * @return
-		 * @throws InvalidSizePatternException
-		 * @throws SqlInjectionException
-		 * @throws DocumentIsNotAnImageException
-		 * @throws DocumentIsNotAFileException
-		 * @throws DocumentNotFoundException
-		 * @throws IOException
-		 * @throws FileTooBigException 
-		 */
-		public static byte[] getResizedPicture(String id, String width, String height) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException{
-			String sizePattern = width + "-" + height;
-			return getResizedPicture (id,sizePattern);
-		}
-		
-		public static byte[] getResizedPicture(String id, int sizeId) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException{
-			String sizePattern = "";
-			try{
-				sizePattern=ImagesConfiguration.IMAGE_ALLOWED_AUTOMATIC_RESIZE_FORMATS.getValueAsString().split(" ")[sizeId];
-			}catch (IndexOutOfBoundsException e){
-				throw new InvalidSizePatternException("The specified id is out of range.");
-			}
-			return getResizedPicture (id,sizePattern);
-		}
-		
-		public static byte[] getResizedPicture(String id, String sizePattern) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException {
-			ImageDimensions dimensions = StorageUtils.convertPatternToDimensions(sizePattern);
-			return getResizedPicture (id,dimensions);
-		}
+            while (itUsersRoles.hasNext()){
+                Entry<String, JsonNode> usersOrRoles = itUsersRoles.next();
+                JsonNode listOfElements = usersOrRoles.getValue();
+                if (listOfElements.isArray()) {
+                    for (final JsonNode element : listOfElements) {
+                        if (usersOrRoles.getKey().equalsIgnoreCase("users"))
+                            grantPermissionToUser((String)doc.field("id"), actionPermission, element.asText());
+                        else
+                            grantPermissionToRole((String)doc.field("id"), actionPermission, element.asText());
+                    }
+                }
+            }
+        }//set permissions
+        return doc;
+    }//createFile with permission
 
 
-		public static byte[] getResizedPicture(String id, ImageDimensions dimensions) throws SqlInjectionException, DocumentIsNotAnImageException, DocumentNotFoundException, DocumentIsNotAFileException, IOException, FileTooBigException {
-			//get the file
-			ODocument file;
-			try {
-				file = getById(id);
-			} catch (InvalidModelException e1) {
-				throw new DocumentIsNotAFileException("The id " + id + " is not a file");
-			}
-			if (file==null) throw new DocumentNotFoundException();
-			//is the file an image?
-			if (!StorageUtils.docIsAnImage(file)) throw new DocumentIsNotAnImageException("The file " + id + " is not an image");
-			//are the dimensions allowed?
-			//the check is delegated to the caller
-			String sizePattern= dimensions.toString();
-			try{
-				FileDao dao=FileDao.getInstance();
-				byte[] resizedImage = dao.getStoredResizedPicture( file,  sizePattern);
-				if (resizedImage!=null) return resizedImage;
-				
-				ByteArrayOutputStream fileContent = StorageUtils.extractFileFromDoc(file);
-				if (fileContent.toByteArray().length==0) return new byte[]{};
-				String contentType = getContentType(file);
-				String ext = contentType.substring(contentType.indexOf("/")+1);
-				WritebleImageFormat format;
-				try{
-					format = WritebleImageFormat.valueOf(ext);
-				}catch (Exception e){
-					format= WritebleImageFormat.png;
-				}
-				resizedImage=StorageUtils.resizeImage(fileContent.toByteArray(), format, dimensions);
-				
-				//save the resized image for future requests
-				dao.storeResizedPicture(file, sizePattern, resizedImage);
-				return resizedImage;
-			}catch ( InvalidModelException e) {
-				throw new RuntimeException("A very strange error occurred! ",e);
-			}catch (OutOfMemoryError e){
-				throw new FileTooBigException();
-			}
+    public static ODocument createFile(String fileName,String data,String contentType, long contentLength , InputStream content) throws Throwable{
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(fileName,contentType,contentLength,content);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
 
-		}
+    public static ODocument createFile(String appName, String fileName,String data,String contentType, long contentLength , InputStream content) throws Throwable{
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(appName, fileName,contentType,contentLength,content);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
 
-		public static String getContentType(ODocument file) {
-			return (String) file.field(CONTENT_TYPE_FIELD_NAME);
-		}
-		
-		public static String getExtractedContent(String id) throws SqlInjectionException, InvalidModelException, FileNotFoundException {
-			ODocument file = getById(id);
-			if (file==null) throw new  FileNotFoundException();
-			FileDao dao = FileDao.getInstance();
-			String ret=dao.getExtractedContent(file);
-			return ret;
-		}
+    public static ODocument createFile(String fileName,String data,String contentType, HashMap<String,?> metadata,long contentLength , InputStream content) throws Throwable{
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(fileName,contentType,contentLength,content);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
+
+    public static ODocument createFile(String appName, String fileName,String data,String contentType, HashMap<String,?> metadata,long contentLength , InputStream content) throws Throwable{
+        FileDao dao = FileDao.getInstance();
+        ODocument doc=dao.create(appName, fileName,contentType,contentLength,content);
+        if (data!=null && !data.trim().isEmpty()) {
+            ODocument metaDoc=(new ODocument()).fromJSON("{ '"+DATA_FIELD_NAME+"' : " + data + "}");
+            doc.merge(metaDoc, true, false);
+        }
+        dao.save(doc);
+        return doc;
+    }
+
+    public static ODocument getById(String id) throws SqlInjectionException, InvalidModelException {
+        FileDao dao = FileDao.getInstance();
+        return dao.getById(id);
+    }
+
+    public static void deleteById(String id) throws Throwable, SqlInjectionException, FileNotFoundException{
+        FileDao dao = FileDao.getInstance();
+        ODocument file=getById(id);
+        if (file==null) throw new FileNotFoundException();
+        dao.delete(file.getIdentity());
+    }
+
+
+    public static List<ODocument> getFiles(QueryParams criteria) throws SqlInjectionException {
+        FileDao dao = FileDao.getInstance();
+        return dao.get(criteria);
+    }
+
+    public static List<ODocument> getFiles(String appName, QueryParams criteria) throws SqlInjectionException {
+        ODocument appDoc = AppDao.getInstance().getByName(appName);
+        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
+        FileDao dao = FileDao.getInstance();
+        criteria.where("appid=?").params(new String[]{appID});
+        return dao.get(criteria);
+    }
+
+
+    public static ODocument grantPermissionToRole(String id,Permissions permission, String rolename)
+            throws RoleNotFoundException, FileNotFoundException, SqlInjectionException, InvalidModelException {
+        ORole role=RoleDao.getRole(rolename);
+        if (role==null) throw new RoleNotFoundException(rolename);
+        ODocument doc = getById(id);
+        if (doc==null) throw new FileNotFoundException(id);
+        return PermissionsHelper.grant(doc, permission, role);
+    }
+
+
+    public static ODocument revokePermissionToRole(String id,
+                                                   Permissions permission, String rolename) throws RoleNotFoundException, FileNotFoundException, SqlInjectionException, InvalidModelException  {
+        ORole role=RoleDao.getRole(rolename);
+        if (role==null) throw new RoleNotFoundException(rolename);
+        ODocument doc = getById(id);
+        if (doc==null) throw new FileNotFoundException(id);
+        return PermissionsHelper.revoke(doc, permission, role);
+    }
+
+    public static ODocument grantPermissionToUser(String id, Permissions permission, String username) throws UserNotFoundException, RoleNotFoundException, FileNotFoundException, SqlInjectionException, IllegalArgumentException, InvalidModelException  {
+        OUser user=UserService.getOUserByUsername(username);
+        if (user==null) throw new UserNotFoundException(username);
+        ODocument doc = getById(id);
+        if (doc==null) throw new FileNotFoundException(id);
+        return PermissionsHelper.grant(doc, permission, user);
+    }
+
+    public static ODocument revokePermissionToUser(String id, Permissions permission, String username) throws UserNotFoundException, RoleNotFoundException, FileNotFoundException, SqlInjectionException, IllegalArgumentException, InvalidModelException {
+        OUser user=UserService.getOUserByUsername(username);
+        if (user==null) throw new UserNotFoundException(username);
+        ODocument doc = getById(id);
+        if (doc==null) throw new FileNotFoundException(id);
+        return PermissionsHelper.revoke(doc, permission, user);
+    }
+
+    /**
+     *
+     * @param id
+     * @param width The desired width. It can be expressed both in pixel or in percentage (100px, or 20%)
+     * @param height The desired height. It can be expressed both in pixel or in percentage (100px, or 20%)
+     * @return
+     * @throws InvalidSizePatternException
+     * @throws SqlInjectionException
+     * @throws DocumentIsNotAnImageException
+     * @throws DocumentIsNotAFileException
+     * @throws DocumentNotFoundException
+     * @throws IOException
+     * @throws FileTooBigException
+     */
+    public static byte[] getResizedPicture(String id, String width, String height) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException{
+        String sizePattern = width + "-" + height;
+        return getResizedPicture (id,sizePattern);
+    }
+
+    public static byte[] getResizedPicture(String id, int sizeId) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException{
+        String sizePattern = "";
+        try{
+            sizePattern=ImagesConfiguration.IMAGE_ALLOWED_AUTOMATIC_RESIZE_FORMATS.getValueAsString().split(" ")[sizeId];
+        }catch (IndexOutOfBoundsException e){
+            throw new InvalidSizePatternException("The specified id is out of range.");
+        }
+        return getResizedPicture (id,sizePattern);
+    }
+
+    public static byte[] getResizedPicture(String id, String sizePattern) throws InvalidSizePatternException, SqlInjectionException, DocumentIsNotAnImageException, DocumentIsNotAFileException, DocumentNotFoundException, IOException, FileTooBigException {
+        ImageDimensions dimensions = StorageUtils.convertPatternToDimensions(sizePattern);
+        return getResizedPicture (id,dimensions);
+    }
+
+
+    public static byte[] getResizedPicture(String id, ImageDimensions dimensions) throws SqlInjectionException, DocumentIsNotAnImageException, DocumentNotFoundException, DocumentIsNotAFileException, IOException, FileTooBigException {
+        //get the file
+        ODocument file;
+        try {
+            file = getById(id);
+        } catch (InvalidModelException e1) {
+            throw new DocumentIsNotAFileException("The id " + id + " is not a file");
+        }
+        if (file==null) throw new DocumentNotFoundException();
+        //is the file an image?
+        if (!StorageUtils.docIsAnImage(file)) throw new DocumentIsNotAnImageException("The file " + id + " is not an image");
+        //are the dimensions allowed?
+        //the check is delegated to the caller
+        String sizePattern= dimensions.toString();
+        try{
+            FileDao dao=FileDao.getInstance();
+            byte[] resizedImage = dao.getStoredResizedPicture( file,  sizePattern);
+            if (resizedImage!=null) return resizedImage;
+
+            ByteArrayOutputStream fileContent = StorageUtils.extractFileFromDoc(file);
+            if (fileContent.toByteArray().length==0) return new byte[]{};
+            String contentType = getContentType(file);
+            String ext = contentType.substring(contentType.indexOf("/")+1);
+            WritebleImageFormat format;
+            try{
+                format = WritebleImageFormat.valueOf(ext);
+            }catch (Exception e){
+                format= WritebleImageFormat.png;
+            }
+            resizedImage=StorageUtils.resizeImage(fileContent.toByteArray(), format, dimensions);
+
+            //save the resized image for future requests
+            dao.storeResizedPicture(file, sizePattern, resizedImage);
+            return resizedImage;
+        }catch ( InvalidModelException e) {
+            throw new RuntimeException("A very strange error occurred! ",e);
+        }catch (OutOfMemoryError e){
+            throw new FileTooBigException();
+        }
+
+    }
+
+    public static String getContentType(ODocument file) {
+        return (String) file.field(CONTENT_TYPE_FIELD_NAME);
+    }
+
+    public static String getExtractedContent(String id) throws SqlInjectionException, InvalidModelException, FileNotFoundException {
+        ODocument file = getById(id);
+        if (file==null) throw new  FileNotFoundException();
+        FileDao dao = FileDao.getInstance();
+        String ret=dao.getExtractedContent(file);
+        return ret;
+    }
 
 
 
 
-		
+
 }

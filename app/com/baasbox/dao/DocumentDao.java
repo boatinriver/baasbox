@@ -45,9 +45,24 @@ public class DocumentDao extends NodeDao {
 
 	}
 
+    protected DocumentDao(String appName, String collectionName) throws InvalidCollectionException {
+        super(appName + "_" + collectionName);
+        collDao = CollectionDao.getInstance();
+        try {
+            if (!collDao.existsCollection(appName, collectionName)) throw new InvalidCollectionException("The collection " + collectionName + " does not exists");
+        } catch (SqlInjectionException e) {
+            throw new InvalidCollectionException(e);
+        }
+
+    }
+
 	public static DocumentDao getInstance(String collectionName) throws InvalidCollectionException{
 		return new DocumentDao(collectionName);
 	}
+
+    public static DocumentDao getInstance(String appName, String collectionName) throws InvalidCollectionException{
+        return new DocumentDao(appName, collectionName);
+    }
 	
 	@Override
 	public ODocument create() throws Throwable{

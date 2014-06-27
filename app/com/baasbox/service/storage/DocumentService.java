@@ -203,9 +203,6 @@ public class DocumentService {
 	}
 
     public static long getCount(String appName, String collectionName, QueryParams criteria) throws InvalidCollectionException, SqlInjectionException{
-        ODocument appDoc = AppDao.getInstance().getByName(appName);
-        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
-        criteria.where("appid=?").params(new String[]{appID});
         DocumentDao dao = DocumentDao.getInstance(appName, collectionName);
         return dao.getCount(criteria);
     }

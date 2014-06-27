@@ -216,9 +216,6 @@ public class DocumentService {
 	}
 
     public static List<ODocument> getDocuments(String appName, String collectionName, QueryParams criteria) throws SqlInjectionException, InvalidCollectionException{
-        ODocument appDoc = AppDao.getInstance().getByName(appName);
-        String appID = appDoc.field(BaasBoxPrivateFields.ID.toString());
-        criteria.where("appid=?").params(new String[]{appID});
         DocumentDao dao = DocumentDao.getInstance(appName, collectionName);
         return dao.get(criteria);
     }

@@ -65,7 +65,7 @@ import com.orientechnologies.orient.core.db.record.ODatabaseRecordTx;
 import com.orientechnologies.orient.core.exception.ODatabaseException;
 
 public class Global extends GlobalSettings {
-	
+
 	  private static Boolean  justCreated = false;
 
 
@@ -77,35 +77,35 @@ public class Global extends GlobalSettings {
 		  info(StatisticsService.memory().toString());
 		  info(StatisticsService.java().toString());
 		  if (Boolean.parseBoolean(app.configuration().getString(BBConfiguration.DUMP_DB_CONFIGURATION_ON_STARTUP))) info(StatisticsService.db().toString());
-		 
+
 		  info("...Loading plugin...");
 	  }
-	  
+
 	  @Override
 	  public Configuration onLoadConfig(Configuration config,
           java.io.File path,
-          java.lang.ClassLoader classloader){  
+          java.lang.ClassLoader classloader){
 		  debug("Global.onLoadConfig() called");
 		  info("BaasBox is preparing OrientDB Embedded Server...");
 		  try{
 			  OGlobalConfiguration.TX_LOG_SYNCH.setValue(Boolean.TRUE);
 			  OGlobalConfiguration.TX_COMMIT_SYNCH.setValue(Boolean.TRUE);
-			  
+
 			  OGlobalConfiguration.NON_TX_RECORD_UPDATE_SYNCH.setValue(Boolean.TRUE);
 			  //Deprecated due to OrientDB 1.6
 			  //OGlobalConfiguration.NON_TX_CLUSTERS_SYNC_IMMEDIATELY.setValue(OMetadata.CLUSTER_MANUAL_INDEX_NAME);
-			  
+
 			  OGlobalConfiguration.CACHE_LEVEL1_ENABLED.setValue(Boolean.FALSE);
 			  OGlobalConfiguration.CACHE_LEVEL2_ENABLED.setValue(Boolean.FALSE);
-			  
+
 			  OGlobalConfiguration.INDEX_MANUAL_LAZY_UPDATES.setValue(-1);
 			  OGlobalConfiguration.FILE_LOCK.setValue(false);
-			  
+
 			  OGlobalConfiguration.FILE_DEFRAG_STRATEGY.setValue(1);
-			  
+
 			  OGlobalConfiguration.MEMORY_USE_UNSAFE.setValue(false);
-			  
-			  
+
+
 			  Orient.instance().startup();
 			  ODatabaseDocumentTx db = null;
 			  try{
@@ -131,7 +131,7 @@ public class Global extends GlobalSettings {
 		  debug("Global.onLoadConfig() ended");
 		  return config;
 	  }
-	  
+
 	  @Override
 	  public void onStart(Application app) {
 		 debug("Global.onStart() called");
@@ -166,7 +166,7 @@ public class Global extends GlobalSettings {
     		db = DbHelper.open( BBConfiguration.getAPPCODE(), BBConfiguration.getBaasBoxAdminUsername(), BBConfiguration.getBaasBoxAdminPassword());
     		DbHelper.evolveDB(db);
 			DbHelper.updateDefaultUsers();
-			
+
 			String bbid=Internal.INSTALLATION_ID.getValueAsString();
 			if (bbid==null) throw new Exception ("Unique id not found! Hint: could the DB be corrupted?");
 			info ("BaasBox unique id is " + bbid);
@@ -177,7 +177,7 @@ public class Global extends GlobalSettings {
 		} finally {
     		if (db!=null && !db.isClosed()) db.close();
     	}
-    	
+
     	try{
     		db = DbHelper.open( BBConfiguration.getAPPCODE(), BBConfiguration.getBaasBoxAdminUsername(), BBConfiguration.getBaasBoxAdminPassword());
     		IosCertificateHandler.init();
@@ -189,19 +189,19 @@ public class Global extends GlobalSettings {
     		if (db!=null && !db.isClosed()) db.close();
     	}
     	info ("...done");
-    	
+
     	overrideSettings();
-    	
+
     	//activate metrics
     	BaasBoxMetric.setExcludeURIStartsWith(com.baasbox.controllers.routes.Root.startMetrics().url());
     	if (BBConfiguration.getComputeMetrics()) BaasBoxMetric.start();
-    	
+
     	//prepare the Welcome Message
 	    String port=Play.application().configuration().getString("http.port");
 	    if (port==null) port="9000";
 	    String address=Play.application().configuration().getString("http.address");
 	    if (address==null) address="localhost";
-	    
+
 	    //write the Welcome Message
 	    info("");
 	    info("To login into the amministration console go to http://" + address +":" + port + "/console");
@@ -244,7 +244,7 @@ public class Global extends GlobalSettings {
 					} catch (Exception e) {
 						error ("Error overriding the visible attribute for setting " + key + ": " +e.getMessage());
 					}
-    			}else if (key.endsWith(".editable")){ //or maybe we have to 
+    			}else if (key.endsWith(".editable")){ //or maybe we have to
     				//sets the possibility to edit the value via REST API by the admin
     				Boolean value;
     				try {
@@ -254,7 +254,7 @@ public class Global extends GlobalSettings {
 					} catch (Exception e) {
 						error ("Error overriding the editable attribute setting " + key + ": " +e.getMessage());
 					}
-    			}else { 
+    			}else {
     				error("The configuration key: " + key + " is invalid. value, visible or editable are missing");
     			}
     			key.subSequence(0, key.lastIndexOf("."));
@@ -262,9 +262,9 @@ public class Global extends GlobalSettings {
     	}else info ("...No setting to override...");
     	info ("...done");
 	}
-	  
-	  
-	  
+
+
+
 	  @Override
 	  public void onStop(Application app) {
 		debug("Global.onStop() called");
@@ -284,13 +284,13 @@ public class Global extends GlobalSettings {
 	    SessionTokenProvider.destroySessionTokenProvider();
 	    info("...BaasBox has stopped");
 		debug("Global.onStop() ended");
-	  }  
-	  
+	  }
+
 	private void setCallIdOnResult(RequestHeader request, ObjectNode result) {
 		String callId = request.getQueryString("call_id");
 		if (!StringUtils.isEmpty(callId)) result.put("call_id",callId);
 	}
-	
+
 	private ObjectNode prepareError(RequestHeader request, String error) {
 		ObjectNode result = Json.newObject();
 		ObjectMapper mapper = new ObjectMapper();
@@ -302,8 +302,8 @@ public class Global extends GlobalSettings {
 			result.put("API_version", BBConfiguration.configuration.getString(BBConfiguration.API_VERSION));
 			setCallIdOnResult(request, result);
 		return result;
-	} 
-		
+	}
+
 	  @Override
 	  public F.Promise<SimpleResult> onBadRequest(RequestHeader request, String error) {
 		  ObjectNode result = prepareError(request, error);
@@ -314,7 +314,7 @@ public class Global extends GlobalSettings {
 		  }finally{
 			  return F.Promise.pure (resultToReturn);
 		  }
-	  }  
+	  }
 
 	// 404
 	  @Override
@@ -347,14 +347,14 @@ public class Global extends GlobalSettings {
 	  }
 
 
-	@Override 
+	@Override
 	public <T extends EssentialFilter> Class<T>[] filters() {
-		
+
 		return new Class[]{com.baasbox.filters.LoggingFilter.class};
 	}
 
 
-	  
 
-	
+
+
 }

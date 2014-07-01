@@ -257,6 +257,14 @@ public class Asset extends Controller{
 		List<ODocument> listOfDocs = AssetService.getAssets(criteria);
 		return ok(prepareResponseToJson(listOfDocs));
 	}
+
+    @With  ({UserCredentialWrapFilter.class,ConnectToDBFilter.class, CheckAdminRoleFilter.class, ExtractQueryParameters.class})
+	public static Result w3getAll(String appName) throws  Throwable{
+		Context ctx=Http.Context.current.get();
+		QueryParams criteria = (QueryParams) ctx.args.get(IQueryParametersKeys.QUERY_PARAMETERS);
+		List<ODocument> listOfDocs = AssetService.getAssets(appName,criteria);
+		return ok(prepareResponseToJson(listOfDocs));
+	}
 	
 	
 	private static Result postFile() throws  Throwable{
@@ -266,6 +274,14 @@ public class Asset extends Controller{
 		Map<String, String[]> data=body.asFormUrlEncoded();
 		String[] meta=data.get("meta");
 		String[] name=data.get("name");
+
+        String[] appNames = data.get("appname");
+
+        String appName = appNames[0];
+        if (appNames!=null && appNames.length>0){
+            appName = appNames[0];
+        }else appName="";
+
 		if (name==null || name.length==0 || StringUtils.isEmpty(name[0].trim())) return badRequest("missing name field");
 		String ret="";
 		if (file!=null){
@@ -283,7 +299,8 @@ public class Asset extends Controller{
 		    	if (contentType==null || contentType.isEmpty()) contentType="application/octet-stream";
 		    }
 		    try{
-		    	ODocument doc=AssetService.createFile(name[0],fileName,metaJson,contentType, fileContentAsByteArray);
+//		    	ODocument doc=AssetService.createFile(name[0],fileName,metaJson,contentType, fileContentAsByteArray);
+		    	ODocument doc=AssetService.createFile(appName,name[0],fileName,metaJson,contentType, fileContentAsByteArray);
 		    	ret=prepareResponseToJson(doc);
 		    }catch (ORecordDuplicatedException e){
 		    	return badRequest("An asset with the same name already exists");
@@ -316,6 +333,47 @@ public class Asset extends Controller{
 			}
 		    try{
 		    	ODocument doc=AssetService.create(assetName,metaJson);
+		    	ret=prepareResponseToJson(doc);
+		    }catch (ORecordDuplicatedException e){
+		    	return badRequest("An asset with the same name already exists");
+		    }catch (OIndexException e){
+		    	return badRequest("An asset with the same name already exists");
+		    }catch (OSerializationException e){
+		    	return badRequest("the meta field has a problem: " + e.getMessage());
+		    }
+		}else{
+			return badRequest("missing name field");
+		}
+	  return created(ret);
+	}
+
+    @With  ({UserCredentialWrapFilter.class,ConnectToDBFilter.class, CheckAdminRoleFilter.class})
+	public static Result w3post() throws  Throwable{
+		String ct = request().getHeader(CONTENT_TYPE);
+		if (ct.indexOf("multipart/form-data")!=-1) return postFile();
+		Map<String, String[]> body = request().body().asFormUrlEncoded();
+		if (body==null) return badRequest("missing data: is the body x-www-form-urlencoded?");
+		String[] meta=body.get("meta");
+		String[] name=body.get("name");
+        String[] appNames = body.get("appname");
+
+        String appName = appNames[0];
+        if (appNames!=null && appNames.length>0){
+            appName = appNames[0];
+        }else appName="";
+
+		String ret="";
+
+		String assetName = (name!=null && name.length>0) ? name[0] : null;
+
+
+		if (assetName!=null && StringUtils.isNotEmpty(assetName.trim())){
+			String metaJson=null;
+			if (meta!=null && meta.length>0){
+				metaJson = meta[0];
+			}
+		    try{
+		    	ODocument doc=AssetService.create(appName,assetName,metaJson);
 		    	ret=prepareResponseToJson(doc);
 		    }catch (ORecordDuplicatedException e){
 		    	return badRequest("An asset with the same name already exists");

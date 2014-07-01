@@ -1,5 +1,13 @@
 @(version: String, edition: String)
-<div id="users" ng-controller="UsersController">
+<div style="display:none" id="apps" ng-show="loggedIn&&!appSelected" >
+    @admin.main_.topbar(version, edition)
     @admin.main_.content_.app_.addapp()
-    @admin.main_.content_.app_.apps(version,edition)
+    <div class="container-fluid bb-main-container">
+        <div class="row-fluid">
+            @admin.main_.content_.app_.leftmenu(version)
+            @admin.noscript()
+            @admin.main_.content_.apps(version,edition)
+        </div> <!-- /row-fluid -->
+    </div> <!-- /container-fluid -->
+
 </div>

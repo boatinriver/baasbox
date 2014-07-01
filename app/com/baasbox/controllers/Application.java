@@ -16,8 +16,7 @@
  */
 package com.baasbox.controllers;
 
-import com.baasbox.controllers.actions.filters.AnonymousCredentialWrapFilter;
-import com.baasbox.controllers.actions.filters.ConnectToDBFilter;
+import com.baasbox.controllers.actions.filters.*;
 import com.baasbox.dao.UserDao;
 import com.baasbox.dao.exception.InvalidCollectionException;
 import com.baasbox.dao.exception.SqlInjectionException;
@@ -75,6 +74,7 @@ public class Application extends Controller {
 	  return ok(result);
   }
 
+    @With  ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
   public static Result appList(){
 
       if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -101,7 +101,7 @@ public class Application extends Controller {
   }
 
     /* create app */
-    @With (ConnectToDBFilter.class)
+    @With  ({UserCredentialWrapFilter.class,ConnectToDBFilter.class})
   public static Result addApp(){
 
           if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -134,5 +134,29 @@ public class Application extends Controller {
           return created();
 
       }//createApp
+
+
+    /* delete app */
+    @With  ({UserCredentialWrapFilter.class,ConnectToDBFilter.class, CheckAdminRoleFilter.class})
+    public static Result deleteApp(String name){
+
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        try {
+            com.baasbox.service.storage.AppService.drop(name);
+        }catch(InvalidParameterException e){
+            return badRequest(e.getMessage());
+        }catch (OSerializationException e){
+            return badRequest("Body is not a valid JSON: ");
+        }catch (Exception e) {
+            Logger.error(ExceptionUtils.getFullStackTrace(e));
+            throw new RuntimeException(e) ;
+        }catch(Throwable e){
+            Logger.error(ExceptionUtils.getFullStackTrace(e));
+        }
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        return ok();
+
+    }//deleteApp
+
 
 }

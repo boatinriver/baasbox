@@ -70,6 +70,7 @@ function refreshCollectionCache(arr,fun){
 
 			}
 		});
+
 	}
 }
 
@@ -152,8 +153,12 @@ function dropDb()
 
 $('a.deleteCollection').live('click',function(e){
 	var name = $(e.target).parents('tr').children()[0].innerHTML
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+//    alert(appname +"^^^^"+ name);
 	if(confirm("Are you sure you want to delete this collection?")){
-		BBRoutes.com.baasbox.controllers.Admin.dropCollection(name).ajax({
+//		BBRoutes.com.baasbox.controllers.Admin.dropCollection(name).ajax({
+		BBRoutes.com.baasbox.controllers.Admin.w3dropCollection(appname,name).ajax({
 			error:function(data){
 				alert(JSON.parse(data.responseText)["message"]);
 			},
@@ -238,8 +243,6 @@ function downloadExportHref(name){
 
 }
 
-
-
 $('.btn-changepwd').click(function(e){
     resetChangePasswordForm();
     $('#changePwdModal').modal('show');
@@ -300,6 +303,16 @@ function switchEndpoint(enabled,name){
         }
     });
 }
+
+$("#menu-app-select").on("click",function(e){
+//    $('#menu-app-select').click(function(e){
+    var appscope=$("#appSelected").scope();
+//    alert("here ...");
+    appscope.$apply(function(){
+        appscope.appSelected=false;
+    });
+    loadAppTable();
+});
 
 $(".btn-action").live("click", function() {
 	var action = $(this).attr("action");
@@ -372,6 +385,11 @@ $(".btn-action").live("click", function() {
             break;
 	case "delete":
 		switch (actionType)	{
+        case "app":
+            if(!confirm("Do you want to delete '"+ parameters +"' app?"))
+                return;
+            deleteApp(parameters);
+            break;
 		case "user":
 			break;
 		case "collection":
@@ -393,6 +411,7 @@ $(".btn-action").live("click", function() {
 			break;
 		case "document":
 		//in this case the parameter is pair ID/COLLECTION
+            alert(parameters+"5555555555555555555");
 			var id=parameters.substring(0,36);
 			var collection=parameters.substr(36);
 			if(!confirm("Are you sure you want to delete the '"+ id +"' document of the collection '"+collection+"' ?"))
@@ -401,7 +420,17 @@ $(".btn-action").live("click", function() {
 			break;
 		}
 		break;
-		}
+    case "select":
+        switch(actionType){
+            case "app":
+//                if(!confirm("Do you want to select '"+ parameters +"' app?"))
+//                    return;
+                selectApp(parameters);
+                break;
+        }
+        break;
+
+    }
 	});
 
 function suspendOrActivateUser(suspend,userName)
@@ -419,6 +448,38 @@ function suspendOrActivateUser(suspend,userName)
             }
         }
     );
+}
+
+function selectApp(appname)
+{
+    //dosomething keep appname in scope var
+    var appscope=$("#appSelected").scope();
+    appscope.$apply(function(){
+        appscope.appSelected=true;
+    });
+    appscope.$apply(function(){
+        appscope.appName=appname;
+//        alert(appscope.appName);
+    });
+
+    //    callMenu("#dashboard");
+    callMenu("#collections");
+
+}
+function deleteApp(appid)
+{
+    BBRoutes.com.baasbox.controllers.Application.deleteApp(appid).ajax(
+        {
+            data: {"appid": appid},
+            error: function(data)
+            {
+                alert(JSON.parse(data.responseText)["message"]);
+            },
+            success: function(data)
+            {
+                loadAppTable();
+            }
+        })
 }
 function deleteAsset(assetName)
 {
@@ -453,7 +514,12 @@ function deleteFile(id)
 }
 
 function deleteDocument(collection,id){
-	BBRoutes.com.baasbox.controllers.Document.deleteDocument(collection,id,true).ajax(
+
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+
+//	BBRoutes.com.baasbox.controllers.Document.deleteDocument(collection,id,true).ajax(
+	BBRoutes.com.baasbox.controllers.Document.w3deleteDocument(appname,collection,id,true).ajax(
 			{
 				error: function(data)	{
 					alert(JSON.parse(data.responseText)["message"]);
@@ -538,11 +604,13 @@ function openRoleEditForm(editRoleName){
 }
 
 function populateDocumentEditForm(docObject){
+    val = $("#selectCollection").val();
 	$("#txtDocumentId").val(docObject.id);
 	$("#txtDocumentAuthor").val(docObject["_author"]);
 	$("#txtDocumentCreationDate").val(docObject["_creation_date"]);
 	$("#txtDocumentVersion").val(docObject["@version"]);
-	$("#txtDocumentCollection").val(docObject["@class"]);
+//	$("#txtDocumentCollection").val(docObject["@class"]);
+	$("#txtDocumentCollection").val(val);
 	var obj = JSON.parse(JSON.stringify(docObject));
 	delete obj["@rid"];
 	delete obj["@class"];
@@ -649,12 +717,17 @@ function loadAppTable()
 {
     BBRoutes.com.baasbox.controllers.Application.appList().ajax({
         data: {orderBy: "app.name asc"},
+        error: function(data)
+        {
+            alert(data);
+        },
         success: function(data) {
             appDataArray = data["data"];
             //console.debug("Admin.getUsers success:");
             //console.debug(data);
             $('#appTable').dataTable().fnClearTable();
             $('#appTable').dataTable().fnAddData(appDataArray);
+
         }
     });
 }
@@ -793,9 +866,14 @@ function updateRole(){
 }//updateRole
 
 function addDocument(){
+
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+
 	var collection=$("#txtDocumentCollection").val();
 	var data=JSON.parse($("#txtDocumentData").val());
-	BBRoutes.com.baasbox.controllers.Document.createDocument(collection).ajax(
+//	BBRoutes.com.baasbox.controllers.Document.createDocument(collection).ajax(
+	BBRoutes.com.baasbox.controllers.Document.w3createDocument(appname,collection).ajax(
 			{
 				data: JSON.stringify(data),
 				contentType: "application/json",
@@ -818,13 +896,18 @@ function addDocument(){
 
 
 function updateDocument(){
+
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+
 	var id=$("#txtDocumentId").val();
 	var collection=$("#txtDocumentCollection").val();
 	var version=$("#txtDocumentVersion").val();
 	var data=JSON.parse($("#txtDocumentData").val());
 	data["@version"]=parseInt(version);
 
-	BBRoutes.com.baasbox.controllers.Document.updateDocument(collection,id,true).ajax(
+//	BBRoutes.com.baasbox.controllers.Document.updateDocument(collection,id,true).ajax(
+	BBRoutes.com.baasbox.controllers.Document.w3updateDocument(appname,collection,id,true).ajax(
 			{
 				data: JSON.stringify(data),
 				contentType: "application/json",
@@ -1040,13 +1123,18 @@ $('.btn-DocumentCommit').click(function(e){
 }); // Validate and Ajax submit for Insert/Update Document
 
 $('.btn-DocumentReload').click(function(e){
+
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+
 	var errorMessage = '';
 	$("#errorAddDocument").addClass("hide");
 
 	var id=$("#txtDocumentId").val();
 	var collection=$("#txtDocumentCollection").val();
 
-	BBRoutes.com.baasbox.controllers.Document.getDocument(collection,id,true).ajax(
+//	BBRoutes.com.baasbox.controllers.Document.getDocument(collection,id,true).ajax(
+	BBRoutes.com.baasbox.controllers.Document.getDocument(appname,collection,id,true).ajax(
 			{
 				error: function(data)
 				{
@@ -1215,15 +1303,20 @@ function isValidJson(code)
 $('.btn-NewCollectionCommit').click(function(e){
 
 	var collectionName = $("#newCollectionName").val();
+    //get app param
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+//    alert(appname);
 
 	if($.trim(collectionName) == '')
 	{
 		return;
 	}
 
-	BBRoutes.com.baasbox.controllers.Admin.createCollection(collectionName).ajax(
+	BBRoutes.com.baasbox.controllers.Admin.w3createCollection(appname,collectionName).ajax(
 			{
-				data: JSON.stringify({"name": collectionName}),
+//				data: JSON.stringify({"name": collectionName}),
+				data: JSON.stringify({"appName": appname,"collName": collectionName}),
 				contentType: "application/json",
 				processData: false,
 				error: function(data)
@@ -1393,6 +1486,9 @@ $('#assetForm').submit(function() {
 	var assetName = $("#txtAssetName").val();
 	var assetMeta = ($("#txtAssetMeta").val() == "") ? "{}": $("#txtAssetMeta").val();
 
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
+
 	var errorMessage = '';
 
 	if($.trim(assetName) == "")
@@ -1423,7 +1519,8 @@ $('#assetForm').submit(function() {
 	if ($.trim(assetMeta) == "")
 		assetMeta = "{}";
 
-	var serverUrl=BBRoutes.com.baasbox.controllers.Asset.post().absoluteURL();
+//	var serverUrl=BBRoutes.com.baasbox.controllers.Asset.post().absoluteURL();
+	var serverUrl=BBRoutes.com.baasbox.controllers.Asset.w3post().absoluteURL();
 	if (window.location.protocol == "https:"){
 		serverUrl=serverUrl.replace("http:","https:");
 	}
@@ -1431,6 +1528,7 @@ $('#assetForm').submit(function() {
 	var options = {
 			url: serverUrl,
 			type: "post",
+            data:{appname:appname},
 			dataType: "json",
 			clearForm: true,
 			resetForm: true,
@@ -1452,6 +1550,9 @@ $('#fileForm').submit(function() {
 
 	var fileMeta = ($.trim($("#txtFileAttachedData").val()) == "") ? "{}": $("#txtFileAttachedData").val();
 	var fileName = ($.trim($('#fuFile').val()))
+
+    var appscope=$("#appSelected").scope();
+    var appname = appscope.appName;
 
 	var errorMessage = '';
 
@@ -1476,7 +1577,9 @@ $('#fileForm').submit(function() {
 	}
 
 
-	var serverUrl=BBRoutes.com.baasbox.controllers.File.storeFile().absoluteURL();
+//	var serverUrl=BBRoutes.com.baasbox.controllers.File.storeFile().absoluteURL();
+	var serverUrl=BBRoutes.com.baasbox.controllers.File.w3storeFile().absoluteURL();
+//    alert(serverUrl);
 	if (window.location.protocol == "https:"){
 		serverUrl=serverUrl.replace("http:","https:");
 	}
@@ -1484,6 +1587,7 @@ $('#fileForm').submit(function() {
 	var options = {
 			url: serverUrl,
 			type: "post",
+            data:{appname:appname},
 			dataType: "json",
 			clearForm: true,
 			resetForm: true,
@@ -1559,7 +1663,8 @@ function getActionButton(action, actionType,parameters){
 	case "delete":
 		iconType = "icon-trash";
 		classType = "btn-danger";
-		labelName = "Delete...";
+//		labelName = "Delete...";
+		labelName = "删除...";
 		break;
     case "suspend":
        iconType = "icon-off";
@@ -1581,6 +1686,12 @@ function getActionButton(action, actionType,parameters){
         classType="btn-danger";
         labelName="disable";
         break;
+    case "select":
+        iconType = "icon-ok";
+        classType="btn-info";
+//        labelName="select";
+        labelName="选择";
+        break;
     }
 	var actionButton = "<a title='" + tooltip + "' data-rel='tooltip' class='btn "+ classType +" btn-action' action='"+ action +"' actionType='"+ actionType +"' parameters='"+ parameters +"' href='#'><i class='"+ iconType +"'></i> "+ labelName +"</a>";
 	return actionButton;
@@ -1599,7 +1710,8 @@ function setBradCrumb(type)
 		sBradCrumb = "Users";
 		break;
 	case "#dashboard":
-		sBradCrumb = "Dashboard";
+//		sBradCrumb = "Dashboard";
+        BradCrumb = "仪表盘";
 		break;
 	case "#settings":
 		sBradCrumb = "Settings";
@@ -1608,16 +1720,20 @@ function setBradCrumb(type)
 		sBradCrumb = "DB Manager";
 		break;
 	case "#collections":
-		sBradCrumb = "Collections";
+//		sBradCrumb = "Collections";
+        sBradCrumb = "文档集合";
 		break;
 	case "#documents":
-		sBradCrumb = "Documents";
+//		sBradCrumb = "Documents";
+		sBradCrumb = "文档";
 		break;
 	case "#assets":
-		sBradCrumb = "Assets";
+//		sBradCrumb = "Assets";
+		sBradCrumb = "资源";
 		break;
 	case "#files":
-		sBradCrumb = "Files";
+//		sBradCrumb = "Files";
+		sBradCrumb = "文件";
 		break;
 	}
 
@@ -1715,6 +1831,37 @@ function getAssetIcon(type)
 
 
 function setupTables(){
+    $('#appTable').dataTable( {
+        "sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
+        "sPaginationType": "bootstrap",
+//        "oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+        "oLanguage": {
+            "sLengthMenu": "每页显示 _MENU_ 条记录",
+            "sZeroRecords": "抱歉， 没有找到",
+            "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+            "sInfoEmpty": "没有数据",
+            "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+            "sSearch": "搜索:",
+            "oPaginate": {
+                "sFirst": "首页",
+                "sPrevious": "前一页",
+                "sNext": "后一页",
+                "sLast": "尾页"
+            },
+            "sZeroRecords": "没有检索到数据"
+        },
+        "aoColumns": [ {"mData": "name"},
+            {"mData": "_author"},
+            {"mData": "id", "mRender": function ( data, type, full ) {
+                if(data!=null) //role is modifiable
+                    return '<div class="btn-group">'+ getActionButton("delete","app",full.name) + "&nbsp;" + getActionButton("select","app",full.name);+"</div>"
+                return "No action available";
+            }
+            }],
+        "columns": [{ "width": "40%" },{ "width": "40%" },{ "width": "20%" }],
+        "bRetrieve": true,
+        "bDestroy":true
+    } ).makeEditable();
 	$('#roleTable').dataTable( {
 		"sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
 		"sPaginationType": "bootstrap",
@@ -1889,7 +2036,8 @@ function setupTables(){
 		"aaSorting": [[ 2, "desc" ]],
 		"sPaginationType": "bootstrap",
 		"aoColumns": [ {"mData": "name"},
-		               {"mData": "date"},
+//		               {"mData": "date"},
+		               {"mData": "id"},
 		               {"mData":null,"mRender":function(data,type,full){return "<div class=\"btn-group\"> <a class=\"btn downloadExport\" href=\"#\">Download</a> <a class=\"btn btn-danger deleteExport\">Delete</a> </div>"}}
 		               ],
 		               "bRetrieve": true,
@@ -1899,10 +2047,27 @@ function setupTables(){
 	$('#collectionTable').dataTable( {
 		"sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
 		"sPaginationType": "bootstrap",
-		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+//		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+        "oLanguage": {
+            "sLengthMenu": "每页显示 _MENU_ 条记录",
+            "sZeroRecords": "抱歉， 没有找到",
+            "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+            "sInfoEmpty": "没有数据",
+            "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+            "sSearch": "搜索:",
+            "oPaginate": {
+                "sFirst": "首页",
+                "sPrevious": "前一页",
+                "sNext": "后一页",
+                "sLast": "尾页"
+            },
+            "sZeroRecords": "没有检索到数据"
+        },
 		"aoColumns": [ {"mData": "name"},
-		               {"mData":"records"},
-		               {"mData":null,"mRender":function(data,type,full){return "<div class=\"btn-group\"><a class=\"btn btn-danger deleteCollection\">Delete...</a>"}}],
+//		               {"mData":"records"},
+		               {"mData":"id"},
+//		               {"mData":null,"mRender":function(data,type,full){return "<div class=\"btn-group\"><a class=\"btn btn-danger deleteCollection\">Delete...</a>"}}],
+		               {"mData":null,"mRender":function(data,type,full){return "<div class=\"btn-group\"><a class=\"btn btn-danger deleteCollection\">删除...</a>"}}],
 		               "bRetrieve": true,
 		               "bDestroy":true
 	} ).makeEditable();
@@ -1910,7 +2075,22 @@ function setupTables(){
 	$('#documentTable').dataTable( {
 		"sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
 		"sPaginationType": "bootstrap",
-		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+//		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+        "oLanguage": {
+            "sLengthMenu": "每页显示 _MENU_ 条记录",
+            "sZeroRecords": "抱歉， 没有找到",
+            "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+            "sInfoEmpty": "没有数据",
+            "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+            "sSearch": "搜索:",
+            "oPaginate": {
+                "sFirst": "首页",
+                "sPrevious": "前一页",
+                "sNext": "后一页",
+                "sLast": "尾页"
+            },
+            "sZeroRecords": "没有检索到数据"
+        },
 		"aoColumns": [{"mData": "_creation_date",sWidth:"85px","mRender": function ( data, type, full ) 	{
 //    	    			console.log("DATA: "+data);
                         var datetime = data.split("T");
@@ -1935,7 +2115,9 @@ function setupTables(){
 		               },
 		               {"mData": "id","mRender": function ( data, type, full ) {
 							var obj=JSON.parse(JSON.stringify(full));
-		            	   return getActionButton("edit","document",data + obj["@class"]) + "&nbsp;" + getActionButton("delete","document",data+obj["@class"]);
+                           val = $("#selectCollection").val();
+//		            	   return getActionButton("edit","document",data + obj["@class"]) + "&nbsp;" + getActionButton("delete","document",data+obj["@class"]);
+		            	   return getActionButton("edit","document",data + obj["@class"]) + "&nbsp;" + getActionButton("delete","document",data+val);
 		            	},bSortable:false,bSearchable:false
 		               }
 		               ],
@@ -1968,7 +2150,22 @@ function setupTables(){
 	$('#assetTable').dataTable( {
 		"sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
 		"sPaginationType": "bootstrap",
-		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+//		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+        "oLanguage": {
+            "sLengthMenu": "每页显示 _MENU_ 条记录",
+            "sZeroRecords": "抱歉， 没有找到",
+            "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+            "sInfoEmpty": "没有数据",
+            "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+            "sSearch": "搜索:",
+            "oPaginate": {
+                "sFirst": "首页",
+                "sPrevious": "前一页",
+                "sNext": "后一页",
+                "sLast": "尾页"
+            },
+            "sZeroRecords": "没有检索到数据"
+        },
 		"aoColumns": [
 		              {"mData": "@class", "mRender": function (data, type, full ) {
 		            	  var obj=JSON.parse(JSON.stringify(full));
@@ -2017,7 +2214,22 @@ function setupTables(){
 	$('#fileTable').dataTable( {
 		"sDom": "R<'row-fluid'<'span6'l><'span6'f>r>t<'row-fluid'<'span12'i><'span12 center'p>>",
 		"sPaginationType": "bootstrap",
-		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+//		"oLanguage": {"sLengthMenu": "_MENU_ records per page"},
+        "oLanguage": {
+            "sLengthMenu": "每页显示 _MENU_ 条记录",
+            "sZeroRecords": "抱歉， 没有找到",
+            "sInfo": "从 _START_ 到 _END_ /共 _TOTAL_ 条数据",
+            "sInfoEmpty": "没有数据",
+            "sInfoFiltered": "(从 _MAX_ 条数据中检索)",
+            "sSearch": "搜索:",
+            "oPaginate": {
+                "sFirst": "首页",
+                "sPrevious": "前一页",
+                "sNext": "后一页",
+                "sLast": "尾页"
+            },
+            "sZeroRecords": "没有检索到数据"
+        },
 		"aoColumns": [
 		              {"mData": "id", sWidth:"42px","mRender": function (data, type, full ) {
 		            	  var obj=JSON.parse(JSON.stringify(full));
@@ -2063,10 +2275,16 @@ function setupTables(){
 function setupSelects(){
 
 	$("#selectCollection").chosen().change(function(){
+
+        var appscope=$("#appSelected").scope();
+        var appname = appscope.appName;
+
 		val=$("#selectCollection").val();
-		BBRoutes.com.baasbox.controllers.Document.getDocuments(val).ajax({
+//		BBRoutes.com.baasbox.controllers.Document.getDocuments(val).ajax({
+		BBRoutes.com.baasbox.controllers.Document.w3getDocuments(appname,val).ajax({
 			data: {orderBy: "name asc"},
 			success: function(data) {
+//                alert(val);
 				data=data["data"];
 				var scope=$("#documents").scope();
 				scope.$apply(function(){
@@ -2111,12 +2329,12 @@ function setupMenu(){
 	$(".directLink").unbind("click");
 	//initializeTours
 	$(".tour").click(function(){
-		for (var key in tours) {
-			var tour = tours[key];
-			if (!tour.ended()) tour.end();
-		}
-		tours[$(this).data("tour")].restart();
-	});
+        for (var key in tours) {
+            var tour = tours[key];
+            if (!tour.ended()) tour.end();
+        }
+        tours[$(this).data("tour")].restart();
+    });
 }//setupMenu
 
 function initializeData(action,data){
@@ -2168,6 +2386,7 @@ function callMenu(action){
 	$('#content').parent().append('<div id="loading" class="center">Loading...<div class="center"></div></div>');
 
 	setBradCrumb(action);
+//    alert(action);
 
 	switch (action)	{
 	case "#roles":
@@ -2203,7 +2422,7 @@ function callMenu(action){
 				$('#latestVersion').text(data["latest_version"]);
 				var url=data["announcement_url"];
 				if (url=="") url = data["download_url"];
-				$('#getLatestVersion').prop("href", url);
+//				$('#getLatestVersion').prop("href", url);
 				if ($('#currentVersion').text()<data["latest_version"]+"") {
 					$('#notificationLatestVersion').text("!");
 					$('#notificationLatestVersion').addClass("notification red");
@@ -2384,29 +2603,50 @@ function callMenu(action){
 		break;
 
 	case "#collections":
-		var collections = [];
-		var ref = function(coll){
-        //console.debug("refreshing",coll);
-        collections = coll;
-        applySuccessMenu(action,collections);
-        $('#collectionTable').dataTable().fnClearTable();
-        $('#collectionTable').dataTable().fnAddData(collections);
-    }
-		if(dbCollectionsCache){
-				collections = dbCollectionsCache;
-				ref(collections)
-		}else{
-			refreshCollectionCache(null,function(dd){
-				collections = dd;
-				ref(collections)
-			});
-		}
+
+        var appscope=$("#appSelected").scope();
+        var appname = appscope.appName;
+        BBRoutes.com.baasbox.controllers.Admin.w3getCollections(appname).ajax({
+            data: {orderBy: "name asc"},
+            success: function(data) {
+//                alert("数据获取成功！");
+                dbCollectionsCache = data["data"];
+//                data = data["data"];
+                applySuccessMenu(action,dbCollectionsCache);
+//                dbCollectionsCache = data["data"]["collections_details"];
+                $('#collectionTable').dataTable().fnClearTable();
+                $('#collectionTable').dataTable().fnAddData(dbCollectionsCache);
+                //console.debug(dbCollectionsCache,[].slice.call(dbCollectionsCache, 0));
+            }
+        });
+
+//		var collections = [];
+//		var ref = function(coll){
+//        //console.debug("refreshing",coll);
+//        collections = coll;
+//        applySuccessMenu(action,collections);
+//        $('#collectionTable').dataTable().fnClearTable();
+//        $('#collectionTable').dataTable().fnAddData(collections);
+//    }
+//		if(dbCollectionsCache){
+//				collections = dbCollectionsCache;
+//				ref(collections)
+//		}else{
+//			refreshCollectionCache(null,function(dd){
+//				collections = dd;
+//				ref(collections)
+//			});
+//		}
 		break;//#collections
 	case "#documents":
+        var appscope=$("#appSelected").scope();
+        var appname = appscope.appName;
         $('#documentTable').dataTable().fnClearTable();
-		BBRoutes.com.baasbox.controllers.Admin.getCollections().ajax({
+//		BBRoutes.com.baasbox.controllers.Admin.getCollections().ajax({
+		BBRoutes.com.baasbox.controllers.Admin.w3getCollections(appname).ajax({
 			data: {orderBy: "name asc"},
 			success: function(data) {
+//                alert("方法调用成功！");
 				data=data["data"];
 				applySuccessMenu(action,data);
 				var sel=$('#selectCollection');
@@ -2422,11 +2662,17 @@ function callMenu(action){
 					}));
 				});
 				sel.trigger("liszt:updated");
-			}
+			},
+            error: function(data){
+                alert("方法调用不成功！");
+            }
 		});
 		break; //#documents
 	case "#assets":
-		BBRoutes.com.baasbox.controllers.Asset.getAll().ajax({
+        var appscope=$("#appSelected").scope();
+        var appname = appscope.appName;
+//		BBRoutes.com.baasbox.controllers.Asset.getAll().ajax({
+		BBRoutes.com.baasbox.controllers.Asset.w3getAll(appname).ajax({
 			data: {orderBy: "name asc"},
 			success: function(data) {
 				data=data["data"];
@@ -2438,7 +2684,10 @@ function callMenu(action){
 			}
 		});
 		case "#files":
-		BBRoutes.com.baasbox.controllers.File.getAllFile().ajax({
+        var appscope=$("#appSelected").scope();
+        var appname = appscope.appName;
+//		BBRoutes.com.baasbox.controllers.File.getAllFile().ajax({
+		BBRoutes.com.baasbox.controllers.File.w3getAllFile(appname).ajax({
 			data: {orderBy: "_creation_date asc"},
 			success: function(data) {
 				data=data["data"];
@@ -2493,9 +2742,14 @@ function tryToLogin(user, pass,appCode){
 			//console.debug("data received: ");
 			//console.debug(data);
 			//console.debug("sessionStorage.sessionToken: " + sessionStorage.sessionToken);
-			callMenu("#dashboard");
+            loadAppTable();
+//            callMenu("#dashboard");
 			//refresh the sessiontoken every 5 minutes
 			refreshSessionToken=setInterval(function(){BBRoutes.com.baasbox.controllers.Generic.refreshSessionToken().ajax();},300000);
+//            var appscope=$("#appSelected").scope();
+//            appscope.$apply(function(){
+//                appscope.appSelected=true;
+//            });
 			var scope=$("#loggedIn").scope();
 			scope.$apply(function(){
                 scope.loggedIn=true;

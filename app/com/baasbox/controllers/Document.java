@@ -139,7 +139,37 @@ public class Document extends Controller {
 
 		if (Logger.isTraceEnabled()) Logger.trace("Method End");
 		return ok(ret);
-	}		
+	}
+
+    @With ({UserOrAnonymousCredentialsFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+	public static Result w3getDocuments(String appName,String collectionName){
+		if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+		if (Logger.isTraceEnabled()) Logger.trace("collectionName: " + collectionName);
+
+		List<ODocument> result;
+		String ret="{[]}";
+		try {
+			Context ctx=Http.Context.current.get();
+			QueryParams criteria = (QueryParams) ctx.args.get(IQueryParametersKeys.QUERY_PARAMETERS);
+			result = DocumentService.getDocuments(appName,collectionName,criteria);
+			if (Logger.isTraceEnabled()) Logger.trace("count: " + result.size());
+		} catch (InvalidCollectionException e) {
+			if (Logger.isDebugEnabled()) Logger.debug (collectionName + " is not a valid collection name");
+			return notFound(collectionName + " is not a valid collection name");
+		} catch (Exception e){
+			Logger.error(ExceptionUtils.getFullStackTrace(e));
+			return internalServerError(e.getMessage());
+		}
+
+		try{
+			ret=prepareResponseToJson(result);
+		}catch (IOException e){
+			return internalServerError(ExceptionUtils.getFullStackTrace(e));
+		}
+
+		if (Logger.isTraceEnabled()) Logger.trace("Method End");
+		return ok(ret);
+	}
 
 	private static String getRidByString(String id , boolean isUUID) throws RidNotFoundException {
 		String rid=null;
@@ -230,6 +260,34 @@ public class Document extends Controller {
 			return ok(prepareResponseToJson(doc));
 		}
 
+    @With ({UserOrAnonymousCredentialsFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+    public static Result w3getDocument(String appName, String collectionName, String id, boolean isUUID){
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        if (Logger.isTraceEnabled()) Logger.trace("collectionName: " + collectionName);
+        if (Logger.isTraceEnabled()) Logger.trace("rid: " + id);
+        ODocument doc;
+        try {
+            String rid = getRidByString(id, isUUID);
+            doc=DocumentService.get(appName,collectionName, rid);
+            if (doc==null) return notFound();
+        }catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage()!=null?e.getMessage():"");
+        } catch (InvalidCollectionException e) {
+            return notFound(collectionName + " is not a valid collection name");
+        } catch (InvalidModelException e) {
+            return notFound("Document " + id + " is not a " + collectionName + " document");
+        }catch (ODatabaseException e){
+            return notFound(id + " not found. Do you have the right to read it?");
+        } catch (DocumentNotFoundException e) {
+            return notFound(id + " not found");
+        } catch (RidNotFoundException e) {
+            return notFound(e.getMessage());
+        }
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+
+        return ok(prepareResponseToJson(doc));
+    }
+
 	@With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
 		public static Result getDocumentByRid(String rid){
 			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -273,6 +331,30 @@ public class Document extends Controller {
 			return ok(prepareResponseToJson(document));
 		}
 
+    @With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+		@BodyParser.Of(BodyParser.Json.class)
+		public static Result w3createDocument(String appName,String collection){
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			Http.RequestBody body = request().body();
+
+			JsonNode bodyJson= body.asJson();
+			if (Logger.isTraceEnabled()) Logger.trace("creating document in collection: " + collection);
+			if (Logger.isTraceEnabled()) Logger.trace("bodyJson: " + bodyJson);
+			if (bodyJson==null) return badRequest("The body payload cannot be empty. Hint: put in the request header Content-Type: application/json");
+			ODocument document;
+			try{
+				document=DocumentService.create(appName,collection, bodyJson);
+				if (Logger.isTraceEnabled()) Logger.trace("Document created: " + document.getRecord().getIdentity());
+			}catch (InvalidCollectionException e){
+				return notFound(e.getMessage());
+			}catch (Throwable e){
+				Logger.error(ExceptionUtils.getFullStackTrace(e));
+				return internalServerError(ExceptionUtils.getFullStackTrace(e));
+			}
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return ok(prepareResponseToJson(document));
+		}
+
 	@With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
 		@BodyParser.Of(BodyParser.Json.class)
 		public static Result updateDocument(String collectionName, String id, boolean isUUID){
@@ -303,6 +385,45 @@ public class Document extends Controller {
 				return notFound(id + " unknown");  
 			}catch (OSecurityException e){
 				return forbidden("You have not the right to modify " + id);  
+			}catch (Throwable e){
+				Logger.error(ExceptionUtils.getFullStackTrace(e));
+				return internalServerError(ExceptionUtils.getFullStackTrace(e));
+			}
+			if (document==null) return notFound("Document " + id + " was not found in the collection " + collectionName);
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return ok(prepareResponseToJson(document));
+		}
+
+    @With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+		@BodyParser.Of(BodyParser.Json.class)
+		public static Result w3updateDocument(String appName,String collectionName, String id, boolean isUUID){
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			Http.RequestBody body = request().body();
+			JsonNode bodyJson= body.asJson();
+			if (bodyJson==null) return badRequest("The body payload cannot be empty. Hint: put in the request header Content-Type: application/json");
+			if (bodyJson.get("@version")!=null && !bodyJson.get("@version").isInt()) return badRequest("@version field must be an Integer");
+			if (Logger.isTraceEnabled()) Logger.trace("updateDocument collectionName: " + collectionName);
+			if (Logger.isTraceEnabled()) Logger.trace("updateDocument id: " + id);
+			ODocument document=null;
+			try{
+				String rid=getRidByString(id,isUUID);
+				document=com.baasbox.service.storage.DocumentService.update(appName,collectionName, rid, bodyJson);
+			}catch (UpdateOldVersionException e){
+				return status(CustomHttpCode.DOCUMENT_VERSION.getBbCode(),"You are attempting to update an older version of the document. Your document version is " + e.getVersion1() + ", the stored document has version " + e.getVersion2());
+			}catch (RidNotFoundException e){
+				return notFound("id " + id + " not found");
+			}catch (InvalidCollectionException e){
+				return notFound(collectionName + " is not a valid collection name");
+			}catch (InvalidModelException e){
+				return notFound(id + " is not a valid belongs to " + collectionName);
+			}catch (InvalidParameterException e){
+				return badRequest(id + " is not a document");
+			}catch (IllegalArgumentException e){
+				return badRequest(id + " is not a document");
+			}catch (ODatabaseException e){
+				return notFound(id + " unknown");
+			}catch (OSecurityException e){
+				return forbidden("You have not the right to modify " + id);
 			}catch (Throwable e){
 				Logger.error(ExceptionUtils.getFullStackTrace(e));
 				return internalServerError(ExceptionUtils.getFullStackTrace(e));
@@ -374,6 +495,27 @@ public class Document extends Controller {
 				return notFound("id  " + id + " not found");  
 			}catch (OSecurityException e){
 				return forbidden("You have not the right to delete " + id);  
+			} catch (InvalidCollectionException e) {
+				return notFound(e.getMessage());
+			} catch (Throwable e ){
+				internalServerError(e.getMessage());
+			}
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return ok("");
+		}
+
+    @With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+		public static Result w3deleteDocument(String appName, String collectionName, String id, boolean isUUID){
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			if (Logger.isTraceEnabled()) Logger.trace("deleteDocument collectionName: " + collectionName);
+			if (Logger.isTraceEnabled()) Logger.trace("deleteDocument rid: " + id);
+			try {
+				String rid=getRidByString(id,isUUID);
+				DocumentService.delete(appName,collectionName,rid);
+			}catch (RidNotFoundException e){
+				return notFound("id  " + id + " not found");
+			}catch (OSecurityException e){
+				return forbidden("You have not the right to delete " + id);
 			} catch (InvalidCollectionException e) {
 				return notFound(e.getMessage());
 			} catch (Throwable e ){

@@ -168,6 +168,41 @@ public class Admin extends Controller {
 		return ok(toJson(result));
 	}
 
+    public static Result w3getCollections(String appName){
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+
+        List<ImmutableMap> result=null;
+        List<ODocument> collections = null;
+        String ret="{[]}";
+        try {
+            Context ctx=Http.Context.current.get();
+            QueryParams criteria = (QueryParams) ctx.args.get(IQueryParametersKeys.QUERY_PARAMETERS);
+//            List<ODocument> collections = CollectionService.getCollections(criteria);
+            collections = CollectionService.getCollections(appName,criteria);
+//            result = StatisticsService.collectionsDetails(collections);
+//            for(ImmutableMap map:result){
+//                map.keySet().iterator().
+//            }
+
+        } catch (Exception e){
+            Logger.error(ExceptionUtils.getFullStackTrace(e));
+            return internalServerError(e.getMessage());
+        }
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        response().setContentType("application/json");
+
+
+        try{
+            ret= OJSONWriter.listToJSON(collections, JSONFormats.Formats.USER.toString());
+        }catch (Throwable e){
+            return internalServerError(ExceptionUtils.getFullStackTrace(e));
+        }
+
+
+//        return ok(toJson(result));
+        return ok(ret);
+    }
+
 	public static Result createCollection(String name) throws Throwable{
 		if (Logger.isTraceEnabled()) Logger.trace("Method Start");
 		try{
@@ -185,6 +220,24 @@ public class Admin extends Controller {
 		if (Logger.isTraceEnabled()) Logger.trace("Method End");
 		return created();
 	}
+
+    public static Result w3createCollection(String appname,String collname) throws Throwable{
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        try{
+            CollectionService.create(appname,collname);
+        }catch (CollectionAlreadyExistsException e) {
+            return badRequest(e.getMessage());
+        }catch (InvalidCollectionException e) {
+            return badRequest("The collection name " + appname + " is invalid");
+        }catch (InvalidModelException e){
+            return badRequest(e.getMessage());
+        }catch (Throwable e){
+            Logger.error(ExceptionUtils.getFullStackTrace(e));
+            throw e;
+        }
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        return created();
+    }
 
 	public static Result getDBStatistics(){
 		ODatabaseRecordTx db = DbHelper.getConnection();
@@ -213,6 +266,34 @@ public class Admin extends Controller {
 		response().setContentType("application/json");
 		return ok(toJson(response));
 	}
+
+    public static Result w3getDBStatistics(String appName){
+        ODatabaseRecordTx db = DbHelper.getConnection();
+        ImmutableMap response;
+        try {
+            String bbId = Internal.INSTALLATION_ID.getValueAsString();
+            if (bbId==null) bbId="00-00-00"; //--<<--- this prevents an OrientDB bug retrieving keys
+            response = ImmutableMap.<String,Object>builder().
+                    put("installation", (Object)ImmutableMap.of(
+                            "bb_id",bbId
+                            ,"bb_version", Internal.DB_VERSION.getValueAsString()
+                    ))
+                    .put("db", StatisticsService.db())
+                    .put("data",StatisticsService.data(appName))
+                    .put("os",StatisticsService.os())
+                    .put("java",StatisticsService.java())
+                    .put("memory",StatisticsService.memory()).build();
+
+        } catch (SqlInjectionException e) {
+            Logger.error (ExceptionUtils.getFullStackTrace(e));
+            return internalServerError(e.getMessage());
+        } catch (InvalidCollectionException e) {
+            Logger.error (ExceptionUtils.getFullStackTrace(e));
+            return internalServerError(e.getMessage());
+        }
+        response().setContentType("application/json");
+        return ok(toJson(response));
+    }
 
 	public static Result createRole(String name){
 		String inheritedRole=DefaultRoles.REGISTERED_USER.toString();
@@ -487,6 +568,32 @@ public class Admin extends Controller {
 		response().setContentType("application/json");
 		return ok();
 	}
+
+    /***
+     * Drop an entire collection relate to an app
+     * Data are lost... forever
+     * @param appname the appname which "collname" belong to
+     * @param collname the Collection to drop
+     * @return
+     */
+    public static Result w3dropCollection(String appname,String collname){
+        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+        try {
+
+//            CollectionService.drop(appname,CollectionService.transName(collname)[1]);
+            CollectionService.drop(appname,collname);
+        }catch (SqlInjectionException e){
+            return badRequest("The Collection name "+ collname +" is malformed or invalid.");
+        }catch (InvalidCollectionException e){
+            return notFound("The Collection " + collname + " does not exist");
+        }catch (Exception e){
+            Logger.error(ExceptionUtils.getFullStackTrace(e));
+            return internalServerError(e.getMessage());
+        }
+        if (Logger.isTraceEnabled()) Logger.trace("Method End");
+        response().setContentType("application/json");
+        return ok();
+    }
 
 
 

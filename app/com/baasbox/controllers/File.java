@@ -104,28 +104,28 @@ public class File extends Controller {
 		response().setContentType("application/json");
 		return  JSONFormats.prepareResponseToJson(listOfDoc,JSONFormats.Formats.FILE);
 	}
-	
-	
-	  /*------------------FILE--------------------*/
-	@With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class})
-	  public static Result storeFile() throws  Throwable {
-		  MultipartFormData  body = request().body().asMultipartFormData();
-			if (body==null) return badRequest("missing data: is the body multipart/form-data? Check if it contains boundaries too! " );
-			//FilePart file = body.getFile(FILE_FIELD_NAME);
-			List<FilePart> files = body.getFiles();
-			FilePart file = null;
-			if (!files.isEmpty()) file = files.get(0);
-			String ret="";
-			if (file!=null){
-				Map<String, String[]> data=body.asFormUrlEncoded();
-				String[] datas=data.get(DATA_FIELD_NAME);
-				String[] acl=data.get(ACL_FIELD_NAME);
+
+
+    /*------------------FILE--------------------*/
+    @With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class})
+    public static Result storeFile() throws  Throwable {
+        MultipartFormData  body = request().body().asMultipartFormData();
+        if (body==null) return badRequest("missing data: is the body multipart/form-data? Check if it contains boundaries too! " );
+        //FilePart file = body.getFile(FILE_FIELD_NAME);
+        List<FilePart> files = body.getFiles();
+        FilePart file = null;
+        if (!files.isEmpty()) file = files.get(0);
+        String ret="";
+        if (file!=null){
+            Map<String, String[]> data=body.asFormUrlEncoded();
+            String[] datas=data.get(DATA_FIELD_NAME);
+            String[] acl=data.get(ACL_FIELD_NAME);
 
 				/*extract attachedData */
-				String dataJson=null;
-				if (datas!=null && datas.length>0){
-					dataJson = datas[0];
-				}else dataJson="{}";
+            String dataJson=null;
+            if (datas!=null && datas.length>0){
+                dataJson = datas[0];
+            }else dataJson="{}";
 				
 				/*extract acl*/
 				/*the acl json must have the following format:
@@ -137,116 +137,278 @@ public class File extends Controller {
 				 * 		"update" : .......
 				 * }
 				 */
-				String aclJsonString=null;
-				if (acl!=null && datas.length>0){
-					aclJsonString = acl[0];
-					ObjectMapper mapper = new ObjectMapper();
-					JsonNode aclJson=null;
-					try{
-						aclJson = mapper.readTree(aclJsonString);
-					}catch(JsonProcessingException e){
-						return status(CustomHttpCode.ACL_JSON_FIELD_MALFORMED.getBbCode(),"The 'acl' field is malformed");
-					}
+            String aclJsonString=null;
+            if (acl!=null && datas.length>0){
+                aclJsonString = acl[0];
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode aclJson=null;
+                try{
+                    aclJson = mapper.readTree(aclJsonString);
+                }catch(JsonProcessingException e){
+                    return status(CustomHttpCode.ACL_JSON_FIELD_MALFORMED.getBbCode(),"The 'acl' field is malformed");
+                }
 					/*check if the roles and users are valid*/
-					 Iterator<Entry<String, JsonNode>> it = aclJson.fields();
-					 while (it.hasNext()){
-						 //check for permission read/update/delete/all
-						 Entry<String, JsonNode> next = it.next();
-						 if (!PermissionsHelper.permissionsFromString.containsKey(next.getKey())){
-							 return status(CustomHttpCode.ACL_PERMISSION_UNKNOWN.getBbCode(),"The key '"+next.getKey()+"' is invalid. Valid ones are 'read','update','delete','all'");
-						 }
-						 //check for users/roles
-						 Iterator<Entry<String, JsonNode>> it2 = next.getValue().fields();
-						 while (it2.hasNext()){
-							 Entry<String, JsonNode> next2 = it2.next();
-							 if (!next2.getKey().equals("users") && !next2.getKey().equals("roles")) {
-								 return status(CustomHttpCode.ACL_USER_OR_ROLE_KEY_UNKNOWN.getBbCode(),"The key '"+next2.getKey()+"' is invalid. Valid ones are 'users' or 'roles'");
-							 }
-							 //check for the existance of users/roles
-							 JsonNode arrNode = next2.getValue();
-							 if (arrNode.isArray()) {
-								    for (final JsonNode objNode : arrNode) {
-								        //checks the existance users and/or roles
-								    	if (next2.getKey().equals("users") && !UserService.exists(objNode.asText())) return status(CustomHttpCode.ACL_USER_DOES_NOT_EXIST.getBbCode(),"The user " + objNode.asText() + " does not exists");
-								    	if (next2.getKey().equals("roles") && !RoleService.exists(objNode.asText())) return status(CustomHttpCode.ACL_ROLE_DOES_NOT_EXIST.getBbCode(),"The role " + objNode.asText() + " does not exists");
-								    	
-								    }
-							 }else return status(CustomHttpCode.JSON_VALUE_MUST_BE_ARRAY.getBbCode(),"The '"+next2.getKey()+"' value must be an array");
-						 }
-						 
-					 }
-					
-				}else aclJsonString="{}";
-				
-				
-				
-			    java.io.File fileContent=file.getFile();
-				String fileName = file.getFilename();
+                Iterator<Entry<String, JsonNode>> it = aclJson.fields();
+                while (it.hasNext()){
+                    //check for permission read/update/delete/all
+                    Entry<String, JsonNode> next = it.next();
+                    if (!PermissionsHelper.permissionsFromString.containsKey(next.getKey())){
+                        return status(CustomHttpCode.ACL_PERMISSION_UNKNOWN.getBbCode(),"The key '"+next.getKey()+"' is invalid. Valid ones are 'read','update','delete','all'");
+                    }
+                    //check for users/roles
+                    Iterator<Entry<String, JsonNode>> it2 = next.getValue().fields();
+                    while (it2.hasNext()){
+                        Entry<String, JsonNode> next2 = it2.next();
+                        if (!next2.getKey().equals("users") && !next2.getKey().equals("roles")) {
+                            return status(CustomHttpCode.ACL_USER_OR_ROLE_KEY_UNKNOWN.getBbCode(),"The key '"+next2.getKey()+"' is invalid. Valid ones are 'users' or 'roles'");
+                        }
+                        //check for the existance of users/roles
+                        JsonNode arrNode = next2.getValue();
+                        if (arrNode.isArray()) {
+                            for (final JsonNode objNode : arrNode) {
+                                //checks the existance users and/or roles
+                                if (next2.getKey().equals("users") && !UserService.exists(objNode.asText())) return status(CustomHttpCode.ACL_USER_DOES_NOT_EXIST.getBbCode(),"The user " + objNode.asText() + " does not exists");
+                                if (next2.getKey().equals("roles") && !RoleService.exists(objNode.asText())) return status(CustomHttpCode.ACL_ROLE_DOES_NOT_EXIST.getBbCode(),"The role " + objNode.asText() + " does not exists");
+
+                            }
+                        }else return status(CustomHttpCode.JSON_VALUE_MUST_BE_ARRAY.getBbCode(),"The '"+next2.getKey()+"' value must be an array");
+                    }
+
+                }
+
+            }else aclJsonString="{}";
+
+
+
+            java.io.File fileContent=file.getFile();
+            String fileName = file.getFilename();
 			   /*String contentType = file.getContentType(); 
 			    if (contentType==null || contentType.isEmpty() || contentType.equalsIgnoreCase("application/octet-stream")){	//try to guess the content type
 			    	InputStream is = new BufferedInputStream(new FileInputStream(fileContent));
 			    	contentType = URLConnection.guessContentTypeFromStream(is);
 			    	if (contentType==null || contentType.isEmpty()) contentType="application/octet-stream";
 			    }*/
-				InputStream is = new FileInputStream(fileContent);
+            InputStream is = new FileInputStream(fileContent);
 		    	/* extract file metadata and content */
-		    	try{
-		    	    BodyContentHandler contenthandler = new BodyContentHandler();
-		    		//DefaultHandler contenthandler = new DefaultHandler();
-			        Metadata metadata = new Metadata();
-			        metadata.set(Metadata.RESOURCE_NAME_KEY, fileName);
-			        Parser parser = new AutoDetectParser();
-			        parser.parse(is, contenthandler, metadata,new ParseContext());			        
-			        String contentType =  metadata.get(Metadata.CONTENT_TYPE);
-			       	if (StringUtils.isEmpty(contentType)) contentType="application/octet-stream";
-			       	
-			        HashMap<String,Object> extractedMetaData = new HashMap<String,Object>();
-			        for (String key:metadata.names()){
-			        	try{
-			        	if (metadata.isMultiValued(key)){
-			        		if (Logger.isDebugEnabled()) Logger.debug(key + ": ");
-			        		for (String value: metadata.getValues(key)){
-			        			if (Logger.isDebugEnabled()) Logger.debug("   " + value);
-			        		}
-			        		extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), Arrays.asList(metadata.getValues(key)));
-			        	}else{
-			        		if (Logger.isDebugEnabled()) Logger.debug(key + ": " + metadata.get(key));
-			        		extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), metadata.get(key));
-			        	}
-			        	}catch(Throwable e){
-			        		Logger.warn("Unable to extract metadata for file " + fileName + ", key " + key);
-			        	}
-			        }
-			      
+            try{
+                BodyContentHandler contenthandler = new BodyContentHandler();
+                //DefaultHandler contenthandler = new DefaultHandler();
+                Metadata metadata = new Metadata();
+                metadata.set(Metadata.RESOURCE_NAME_KEY, fileName);
+                Parser parser = new AutoDetectParser();
+                parser.parse(is, contenthandler, metadata,new ParseContext());
+                String contentType =  metadata.get(Metadata.CONTENT_TYPE);
+                if (StringUtils.isEmpty(contentType)) contentType="application/octet-stream";
 
-			        if (Logger.isDebugEnabled()) Logger.debug(".................................");
-			        if (Logger.isDebugEnabled()) Logger.debug(new JSONObject(extractedMetaData).toString());
-			    	
-			        is.close();
-			    	is=new FileInputStream(fileContent);
-			    	ODocument doc=FileService.createFile(
-			    			fileName,
-			    			dataJson,
-			    			aclJsonString,
-			    			contentType, 
-			    			fileContent.length(), 
-			    			is,
-			    			extractedMetaData,
-			    			contenthandler.toString());
-			    	ret=prepareResponseToJson(doc); 
-		    	}catch ( JsonProcessingException e) {
-		    		throw new Exception ("Error parsing acl field. HINTS: is it a valid JSON string?", e);
-				}catch (Throwable e){
-		    		throw new Exception ("Error parsing uploaded file", e);
-		    	} finally{
-		    		if (is != null) is.close();
-		    	}
-			}else{
-				return badRequest("missing the file data in the body payload");
-			}
-		  return created(ret);
-	  }//storeFile()
-	  
+                HashMap<String,Object> extractedMetaData = new HashMap<String,Object>();
+                for (String key:metadata.names()){
+                    try{
+                        if (metadata.isMultiValued(key)){
+                            if (Logger.isDebugEnabled()) Logger.debug(key + ": ");
+                            for (String value: metadata.getValues(key)){
+                                if (Logger.isDebugEnabled()) Logger.debug("   " + value);
+                            }
+                            extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), Arrays.asList(metadata.getValues(key)));
+                        }else{
+                            if (Logger.isDebugEnabled()) Logger.debug(key + ": " + metadata.get(key));
+                            extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), metadata.get(key));
+                        }
+                    }catch(Throwable e){
+                        Logger.warn("Unable to extract metadata for file " + fileName + ", key " + key);
+                    }
+                }
+
+
+                if (Logger.isDebugEnabled()) Logger.debug(".................................");
+                if (Logger.isDebugEnabled()) Logger.debug(new JSONObject(extractedMetaData).toString());
+
+                is.close();
+                is=new FileInputStream(fileContent);
+                ODocument doc=FileService.createFile(
+                        fileName,
+                        dataJson,
+                        aclJsonString,
+                        contentType,
+                        fileContent.length(),
+                        is,
+                        extractedMetaData,
+                        contenthandler.toString());
+                ret=prepareResponseToJson(doc);
+            }catch ( JsonProcessingException e) {
+                throw new Exception ("Error parsing acl field. HINTS: is it a valid JSON string?", e);
+            }catch (Throwable e){
+                throw new Exception ("Error parsing uploaded file", e);
+            } finally{
+                if (is != null) is.close();
+            }
+        }else{
+            return badRequest("missing the file data in the body payload");
+        }
+        return created(ret);
+    }//storeFile()
+
+    /*------------------FILE--------------------*/
+    @With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class})
+    public static Result w3storeFile() throws  Throwable {
+
+//        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+//        Http.RequestBody body1 = request().body();
+//
+//        JsonNode bodyJson = body1.asJson();
+//        if (Logger.isDebugEnabled()) Logger.debug("signUp bodyJson: " + bodyJson);
+//
+//        //check and validate input
+//        if (!bodyJson.has("appname"))
+//            return badRequest("The 'appname' field is missing");
+//
+//        //extract fields
+//        String appname=(String) bodyJson.findValuesAsText("appname").get(0);
+
+        MultipartFormData  body = request().body().asMultipartFormData();
+        if (body==null) return badRequest("missing data: is the body multipart/form-data? Check if it contains boundaries too! " );
+        //FilePart file = body.getFile(FILE_FIELD_NAME);
+        List<FilePart> files = body.getFiles();
+        FilePart file = null;
+        if (!files.isEmpty()) file = files.get(0);
+        String ret="";
+        if (file!=null){
+            Map<String, String[]> data=body.asFormUrlEncoded();
+            String[] datas=data.get(DATA_FIELD_NAME);
+            String[] acl=data.get(ACL_FIELD_NAME);
+            String[] appNames = data.get("appname");
+
+            String appName = appNames[0];
+            if (appNames!=null && appNames.length>0){
+                appName = appNames[0];
+            }else appName="";
+
+				/*extract attachedData */
+            String dataJson=null;
+            if (datas!=null && datas.length>0){
+                dataJson = datas[0];
+            }else dataJson="{}";
+
+				/*extract acl*/
+				/*the acl json must have the following format:
+				 * {
+				 * 		"read" : {
+				 * 					"users":[],
+				 * 					"roles":[]
+				 * 				 }
+				 * 		"update" : .......
+				 * }
+				 */
+            String aclJsonString=null;
+            if (acl!=null && datas.length>0){
+                aclJsonString = acl[0];
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode aclJson=null;
+                try{
+                    aclJson = mapper.readTree(aclJsonString);
+                }catch(JsonProcessingException e){
+                    return status(CustomHttpCode.ACL_JSON_FIELD_MALFORMED.getBbCode(),"The 'acl' field is malformed");
+                }
+					/*check if the roles and users are valid*/
+                Iterator<Entry<String, JsonNode>> it = aclJson.fields();
+                while (it.hasNext()){
+                    //check for permission read/update/delete/all
+                    Entry<String, JsonNode> next = it.next();
+                    if (!PermissionsHelper.permissionsFromString.containsKey(next.getKey())){
+                        return status(CustomHttpCode.ACL_PERMISSION_UNKNOWN.getBbCode(),"The key '"+next.getKey()+"' is invalid. Valid ones are 'read','update','delete','all'");
+                    }
+                    //check for users/roles
+                    Iterator<Entry<String, JsonNode>> it2 = next.getValue().fields();
+                    while (it2.hasNext()){
+                        Entry<String, JsonNode> next2 = it2.next();
+                        if (!next2.getKey().equals("users") && !next2.getKey().equals("roles")) {
+                            return status(CustomHttpCode.ACL_USER_OR_ROLE_KEY_UNKNOWN.getBbCode(),"The key '"+next2.getKey()+"' is invalid. Valid ones are 'users' or 'roles'");
+                        }
+                        //check for the existance of users/roles
+                        JsonNode arrNode = next2.getValue();
+                        if (arrNode.isArray()) {
+                            for (final JsonNode objNode : arrNode) {
+                                //checks the existance users and/or roles
+                                if (next2.getKey().equals("users") && !UserService.exists(objNode.asText())) return status(CustomHttpCode.ACL_USER_DOES_NOT_EXIST.getBbCode(),"The user " + objNode.asText() + " does not exists");
+                                if (next2.getKey().equals("roles") && !RoleService.exists(objNode.asText())) return status(CustomHttpCode.ACL_ROLE_DOES_NOT_EXIST.getBbCode(),"The role " + objNode.asText() + " does not exists");
+
+                            }
+                        }else return status(CustomHttpCode.JSON_VALUE_MUST_BE_ARRAY.getBbCode(),"The '"+next2.getKey()+"' value must be an array");
+                    }
+
+                }
+
+            }else aclJsonString="{}";
+
+
+
+            java.io.File fileContent=file.getFile();
+            String fileName = file.getFilename();
+			   /*String contentType = file.getContentType();
+			    if (contentType==null || contentType.isEmpty() || contentType.equalsIgnoreCase("application/octet-stream")){	//try to guess the content type
+			    	InputStream is = new BufferedInputStream(new FileInputStream(fileContent));
+			    	contentType = URLConnection.guessContentTypeFromStream(is);
+			    	if (contentType==null || contentType.isEmpty()) contentType="application/octet-stream";
+			    }*/
+            InputStream is = new FileInputStream(fileContent);
+		    	/* extract file metadata and content */
+            try{
+                BodyContentHandler contenthandler = new BodyContentHandler();
+                //DefaultHandler contenthandler = new DefaultHandler();
+                Metadata metadata = new Metadata();
+                metadata.set(Metadata.RESOURCE_NAME_KEY, fileName);
+                Parser parser = new AutoDetectParser();
+                parser.parse(is, contenthandler, metadata,new ParseContext());
+                String contentType =  metadata.get(Metadata.CONTENT_TYPE);
+                if (StringUtils.isEmpty(contentType)) contentType="application/octet-stream";
+
+                HashMap<String,Object> extractedMetaData = new HashMap<String,Object>();
+                for (String key:metadata.names()){
+                    try{
+                        if (metadata.isMultiValued(key)){
+                            if (Logger.isDebugEnabled()) Logger.debug(key + ": ");
+                            for (String value: metadata.getValues(key)){
+                                if (Logger.isDebugEnabled()) Logger.debug("   " + value);
+                            }
+                            extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), Arrays.asList(metadata.getValues(key)));
+                        }else{
+                            if (Logger.isDebugEnabled()) Logger.debug(key + ": " + metadata.get(key));
+                            extractedMetaData.put(key.replace(":", "_").replace(" ", "_").trim(), metadata.get(key));
+                        }
+                    }catch(Throwable e){
+                        Logger.warn("Unable to extract metadata for file " + fileName + ", key " + key);
+                    }
+                }
+
+
+                if (Logger.isDebugEnabled()) Logger.debug(".................................");
+                if (Logger.isDebugEnabled()) Logger.debug(new JSONObject(extractedMetaData).toString());
+
+                is.close();
+                is=new FileInputStream(fileContent);
+                ODocument doc=FileService.createFile(
+                        appName,
+                        fileName,
+                        dataJson,
+                        aclJsonString,
+                        contentType,
+                        fileContent.length(),
+                        is,
+                        extractedMetaData,
+                        contenthandler.toString());
+                ret=prepareResponseToJson(doc);
+            }catch ( JsonProcessingException e) {
+                throw new Exception ("Error parsing acl field. HINTS: is it a valid JSON string?", e);
+            }catch (Throwable e){
+                throw new Exception ("Error parsing uploaded file", e);
+            } finally{
+                if (is != null) is.close();
+            }
+        }else{
+            return badRequest("missing the file data in the body payload");
+        }
+        return created(ret);
+    }//storeFile()
+
 
 	@With ({UserCredentialWrapFilter.class,ConnectToDBFilter.class})
 	public static Result deleteFile(String id) throws Throwable{
@@ -287,6 +449,22 @@ public class File extends Controller {
 		}
 		return ok(prepareResponseToJson(listOfFiles));
 	}
+
+    @With ({UserOrAnonymousCredentialsFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
+	public static Result w3getAllFile(String appName) throws IOException{
+
+		Context ctx=Http.Context.current.get();
+		QueryParams criteria = (QueryParams) ctx.args.get(IQueryParametersKeys.QUERY_PARAMETERS);
+		List<ODocument> listOfFiles;
+		try {
+			listOfFiles = FileService.getFiles(appName,criteria);
+		} catch (InvalidCriteriaException e) {
+			return badRequest(e.getMessage()!=null?e.getMessage():"");
+		} catch (SqlInjectionException e) {
+			return badRequest("the supplied criteria appear invalid (Sql Injection Attack detected)");
+		}
+		return ok(prepareResponseToJson(listOfFiles));
+	}
 	
 	@With ({UserOrAnonymousCredentialsFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
 	public static Result getFileContent(String id){
@@ -307,7 +485,7 @@ public class File extends Controller {
 	
 	@With ({UserOrAnonymousCredentialsFilter.class,ConnectToDBFilter.class,ExtractQueryParameters.class})
 	public static Result getFile(String id){
-		
+
 		ODocument doc;
 		try {
 			doc = FileService.getById(id);

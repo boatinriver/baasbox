@@ -1,7 +1,11 @@
 			<div id="files" ng-controller="FilesController">
-				<p class="hint">
-					Files stored on BaasBox
-				</p>			
+				@*<p class="hint">*@
+					@*Files stored on BaasBox*@
+				@*</p>*@
+                <p class="hint">
+					存储在服务其上的文件资源，这些资源一般是通过文档中的字段引用的。
+                    即这些文件是与文档相关的资源
+				</p>
 				@admin.main_.content_.files_.files()
 				@admin.main_.content_.files_.newFile()
 			</div>

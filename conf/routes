@@ -2,6 +2,10 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
+#GET     /apps/apiinsterapp             com.baasbox.controllers.Apps.apiInsertApp()
+#GET     /apps/apiqueryapp              com.baasbox.controllers.Apps.apiQueryApp()
+#GET     /apps/apideleteapp             com.baasbox.controllers.Apps.apiDeleteApp()
+
 # Swagger - Root Resources Listing
 # GET     /api-docs.json               controllers.ApiHelpController.getResources
 
@@ -20,8 +24,13 @@ GET     /console/js/routes      	 	com.baasbox.controllers.AllRoutes.javascriptR
 GET     /console/*file               	controllers.Assets.at(path="/public/console", file)
 
 # App Management
-GET     /app/list                       com.baasbox.controllers.Application.appList()
-POST    /app/addapp                     com.baasbox.controllers.Application.addApp()
+POST    /app/list                           com.baasbox.controllers.Application.appList()
+POST    /app/addapp                         com.baasbox.controllers.Application.addApp()
+DELETE  /app/delete/:appname                com.baasbox.controllers.Application.deleteApp(appname: String)
+
+#Assets action custom
+POST    /admin/w3asset                      com.baasbox.controllers.Asset.w3post()
+GET     /admin/w3asset/:appname             com.baasbox.controllers.Asset.w3getAll(appname: String)
 
 #Assets action
 POST	/admin/asset						com.baasbox.controllers.Asset.post()
@@ -54,6 +63,7 @@ GET		/asset/:name/resizeId/:sizeId		com.baasbox.controllers.Asset.downloadSizeId
 
 # @tag(baasbox.assets)
 GET		/asset/:name						com.baasbox.controllers.Asset.download(name: String, download: Boolean ?= false)
+
 
 # User actions
 
@@ -184,21 +194,26 @@ GET		 /document/%23:rid							com.baasbox.controllers.Document.getDocumentByRid(
 
 # @tag(baasbox.data.write)
 POST	 /document/:collection	 					com.baasbox.controllers.Document.createDocument(collection: String)
+POST	 /document/:appName/:collection	 			com.baasbox.controllers.Document.w3createDocument(appName: String, collection: String)
 
 # @tag(baasbox.data.read)
 GET		 /document/:collection						com.baasbox.controllers.Document.getDocuments(collection: String)
+GET		 /document/:appName/:collection				com.baasbox.controllers.Document.w3getDocuments(appName: String,collection: String)
 
 # @tag(baasbox.data.read)
 GET 	 /document/:collection/count  				com.baasbox.controllers.Document.getCount(collection: String)
 
 # @tag(baasbox.data.update)
 PUT 	 /document/:collection/%23:rid					com.baasbox.controllers.Document.updateDocument(collection: String, rid: String, isUUID: Boolean ?= false)
+PUT 	 /document/:appName/:collection/%23:rid			com.baasbox.controllers.Document.w3updateDocument(appName: String, collection: String, rid: String, isUUID: Boolean ?= false)
 
 # @tag(baasbox.data.read)
 GET		 /document/:collection/%23:rid					com.baasbox.controllers.Document.getDocument(collection: String, rid: String, isUUID: Boolean ?= false)
+GET		 /document/:appName/:collection/%23:rid			com.baasbox.controllers.Document.w3getDocument(appName: String, collection: String, rid: String, isUUID: Boolean ?= false)
 
 # @tag(baasbox.data.write)
 DELETE	 /document/:collection/%23:rid					com.baasbox.controllers.Document.deleteDocument(collection: String, rid: String, isUUID: Boolean ?= false)
+DELETE	 /document/:appName/:collection/%23:rid			com.baasbox.controllers.Document.w3deleteDocument(appName: String, collection: String, rid: String, isUUID: Boolean ?= false)
 
 # @tag(baasbox.data.update)
 PUT 	 /document/:collection/:uuid					com.baasbox.controllers.Document.updateDocument(collection: String, uuid: String, isUUID: Boolean ?= true)
@@ -260,6 +275,12 @@ DELETE	/document/:collection/:uuid/:action/role/:rolename		com.baasbox.controlle
 
 
 
+#Admin actions custom
+POST    /admin/collection/:appname/:collname       com.baasbox.controllers.Admin.w3createCollection(appname: String,collname: String)
+GET     /admin/collection/:appname                 com.baasbox.controllers.Admin.w3getCollections(appname: String)
+DELETE  /admin/collection/:appname/:collname       com.baasbox.controllers.Admin.w3dropCollection(appname: String,collname: String)
+
+
 #Admin actions
 GET		/admin/user						com.baasbox.controllers.Admin.getUsers()
 GET		/admin/user/:username			com.baasbox.controllers.Admin.getUser(username: String)
@@ -283,9 +304,11 @@ DELETE  /admin/role/:name				com.baasbox.controllers.Admin.deleteRole(name: Stri
 
 # @tag(baasbox.file.read)
 GET		 /file/details					com.baasbox.controllers.File.getAllFile()
+POST     /file/w3details/:appName       com.baasbox.controllers.File.w3getAllFile(appName: String)
 
 # @tag(baasbox.file.write)
 POST 	 /file							com.baasbox.controllers.File.storeFile()
+POST     /w3file                        com.baasbox.controllers.File.w3storeFile()
 
 # @tag(baasbox.file.write)
 DELETE	 /file/:uuid					com.baasbox.controllers.File.deleteFile(uuid: String)
@@ -303,6 +326,8 @@ GET		 /file/content/:uuid		com.baasbox.controllers.File.getFileContent(uuid: Str
 
 # @tag(baasbox.file.read)
 GET		 /file/:uuid					com.baasbox.controllers.File.streamFile(uuid: String)
+
+
 
 #grants on Files
 
@@ -349,6 +374,7 @@ GET     /admin/endpoints/:tag                                   com.baasbox.cont
 PUT     /admin/endpoints/:tag/enabled                           com.baasbox.controllers.Admin.setPermissionTagEnabled(tag:String,enable:Boolean ?=true)
 DELETE  /admin/endpoints/:tag/enabled                           com.baasbox.controllers.Admin.setPermissionTagEnabled(tag:String,enable:Boolean ?=false)
 
+
 # ROOT access
 # ROOT RESET ADMIN PASSWORD
 POST	/root/resetadminpassword								com.baasbox.controllers.Root.resetAdminPassword()
@@ -368,8 +394,6 @@ GET	    /root/db/export/:filename							    com.baasbox.controllers.Root.getExpo
 DELETE	/root/db/export/:filename							    com.baasbox.controllers.Root.deleteExport(filename:String)
 GET	    /root/db/export											com.baasbox.controllers.Root.getExports()
 POST	/root/db/import         							    com.baasbox.controllers.Root.importDb()
-
-
 
 # Home page & general API
 GET		/refresh					com.baasbox.controllers.Generic.refreshSessionToken()

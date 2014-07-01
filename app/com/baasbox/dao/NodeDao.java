@@ -283,7 +283,9 @@ public abstract class NodeDao  {
 	
 	public void delete(String rid) throws Throwable{
 		if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+
 		ODocument doc = get(rid);
+
 		delete(doc.getIdentity());
 		if (Logger.isTraceEnabled()) Logger.trace("Method End");
 	}
@@ -295,9 +297,9 @@ public abstract class NodeDao  {
 		try{
 			DbHelper.requestTransaction();
 			OrientVertex vertex = db.getVertex(((ODocument)db.getRawGraph().load(rid))
-														.field(FIELD_LINK_TO_VERTEX));
-			db.removeVertex(vertex);
-			db.getRawGraph().delete(rid);
+                    .field(FIELD_LINK_TO_VERTEX));
+            db.removeVertex(vertex);
+            db.getRawGraph().delete(rid);
 			DbHelper.commitTransaction();
 		}catch (Throwable e){
 			DbHelper.rollbackTransaction();

@@ -1,12 +1,17 @@
-				<p class="hint">
-Collections are 'buckets' of group documents (aka objects). Documents are objects defined in JSON format. For each defined collection the number of records is shown. You can delete a collection and all the objects belonging to it by clicking on the 'Delete...' button.
+				@*<p class="hint">*@
+@*Collections are 'buckets' of group documents (aka objects). Documents are objects defined in JSON format. For each defined collection the number of records is shown. You can delete a collection and all the objects belonging to it by clicking on the 'Delete...' button.*@
+@*<br />*@
+@*To create a new collection, click on the 'New Collection' button.*@
+                <p class="hint">
+文档集合是一组文档的存放的地方。文档是以json格式定义的对象。对应每一个集合都有一个数值显示该集合中保存的记录（文档）的数量，通过选择每一项最后的删除按钮，可以删除一个文档集合，该操作同时也会删除集合中包含的所有文档。
 <br />
-To create a new collection, click on the 'New Collection' button.
+可以通过点击“新建”按钮来创建一个新的文档集合。
 
 				</p>
 				<div class="box span11">
 					<div class="box-header well" >
-						<h2><i class="icon-book"></i> Collections</h2>
+						@*<h2><i class="icon-book"></i> Collections</h2>*@
+						<h2><i class="icon-book"></i> 集合列表</h2>
 						<div class="box-icon">
 							<a href="#" class="btn btn-minimize btn-round"><i class="icon-chevron-up"></i></a>
 					</div>
@@ -15,12 +20,16 @@ To create a new collection, click on the 'New Collection' button.
 						<table id="collectionTable" class="table table-striped table-bordered bootstrap-datatable datatable">
 						  <thead>
 							  <tr>
-								  <th>Name</th>
-								  <th>N. of Records</th>
-								  <th>&nbsp;</th>
+								  @*<th>Name</th>*@
+								  @*<th>N. of Records</th>*@
+								  @*<th>&nbsp;</th>*@
+                                  <th>名称</th>
+								  <th>记录ID</th>
+								  <th>可用操作</th>
 							  </tr>
-						  </thead>   
+						  </thead>
 						</table>
-						&nbsp;&nbsp;&nbsp;<a href="#" class="btn btn-primary btn-newcollection">New Collection</a>
+						@*&nbsp;&nbsp;&nbsp;<a href="#" class="btn btn-primary btn-newcollection">New Collection</a>*@
+						&nbsp;&nbsp;&nbsp;<a href="#" class="btn btn-primary btn-newcollection">新建</a>
 					</div><!-- box-content -->
 				</div> <!--  box span12 -->

@@ -1,17 +1,17 @@
 				<div class="box span6">
 					<div data-rel="tooltip" title="System information" 
 						class="box-header well" data-original-title>
-						<h2><i class="icon-hdd"></i> System</h2>
+						<h2><i class="icon-hdd"></i> 系统信息</h2>
 						<div class="box-icon">
 							<a href="#" class="btn btn-minimize btn-round"><i class="icon-chevron-up"></i></a>
 						</div>
 					</div>
 					<div class="box-content">
 						<ul class="nav nav-tabs" id="systemStatTab">
-							<li class="active" data-rel="tooltip" title="System memory statistics"><a href="#memory">Memory</a></li>
-							<li data-rel="tooltip" title="Operating System information" ><a href="#os">OS</a></li>
+							<li class="active" data-rel="tooltip" title="System memory statistics"><a href="#memory">内存信息</a></li>
+							<li data-rel="tooltip" title="Operating System information" ><a href="#os">操作系统</a></li>
 							<li data-rel="tooltip" title="JVM information"><a href="#java">Java</a></li>
-							<li data-rel="tooltip" title="Database information"><a href="#db">Database</a></li>
+							<li data-rel="tooltip" title="Database information"><a href="#db">数据库</a></li>
 						</ul>
 						<div id="systemStatTabContent" class="tab-content">
 							<div class="tab-pane active" id="memory">
@@ -19,7 +19,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-clipboard"></i>
-												<span class="blue" style="display:inline !important">Max Allocable Memory</span>                             
+												<span class="blue" style="display:inline !important"> 最大可分配内存 </span>
 												<span class="green" style="display:inline !important;width:50% !important" >
 													{{formatSize(data.memory.max_allocable_memory)}}
 												</span>                                    
@@ -28,7 +28,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-book-empty"></i>
-												<span class="blue" style="display:inline !important">Current Allocated Memory </span>                              
+												<span class="blue" style="display:inline !important"> 当前已分配内存 </span>
 												<span class="green" style="display:inline !important;width:50% !important"> 
 													{{formatSize(data.memory.current_allocate_memory)}}
 												</span>                                    
@@ -37,7 +37,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-book"></i>
-												<span class="blue" style="display:inline !important">Current Used Memory </span>                              
+												<span class="blue" style="display:inline !important">当前已用内存 </span>
 												<span class="green" style="display:inline !important;width:50% !important"> 
 													{{formatSize(data.memory.used_memory_in_the_allocate_memory)}}
 												</span>                                    
@@ -50,7 +50,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-note"></i>
-												<span class="blue">Name </span>                              
+												<span class="blue">名称 </span>
 												<span class="green"  style="width:50% !important"> 
 													{{data.os.os_name}}
 												</span>                                    
@@ -59,7 +59,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-save"></i>
-												<span class="blue">Version </span>                             
+												<span class="blue">版本 </span>
 												<span class="green" style="width:50% !important" >
 													{{data.os.os_version}}
 												</span>                                    
@@ -68,7 +68,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-lightbulb"></i>
-												<span class="blue">Arch </span>                             
+												<span class="blue">架构 </span>
 												<span class="green" style="width:50% !important" >
 													{{data.os.os_arch}}
 												</span>                                    
@@ -77,7 +77,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-gear"></i>
-												<span class="blue">Processor(s) </span>                             
+												<span class="blue">核心数量 </span>
 												<span class="green" style="width:50% !important" >
 													{{data.os.processors}}
 												</span>                                    
@@ -90,7 +90,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-note"></i>
-												<span class="blue">Version </span>                              
+												<span class="blue">版本 </span>
 												<span class="green"  style="width:50% !important"> 
 													{{data.java.java_version}}
 												</span>                                    
@@ -99,7 +99,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-contacts"></i>
-												<span class="blue">Vendor </span>                             
+												<span class="blue">提供者 </span>
 												<span class="green" style="width:50% !important" >
 													{{data.java.java_vendor}}
 												</span>                                    
@@ -108,7 +108,7 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-compose"></i>
-												<span class="blue">ClassVersion </span>                             
+												<span class="blue">类版本 </span>
 												<span class="green" style="width:50% !important" >
 													{{data.java.java_class_version}}
 												</span>                                    
@@ -124,28 +124,28 @@
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-note"></i>
-												<span class="blue">Version</span>                              
+												<span class="blue">版本号</span>
 												<span class="green"  style="width:50% !important"> OrientDB {{data.db.properties.version}}</span>                                    
 											</a>
 										</li>
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-treeview-corner"></i>
-												<span class="blue">Path</span>                             
+												<span class="blue">数据库路径</span>
 												<span class="green" style="width:50% !important" >{{data.db.properties.path}}</span>                                    
 											</a>
 										</li>											
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-copy"></i>
-												<span class="blue">Data Size</span>                             
+												<span class="blue">数据大小</span>
 												<span class="green" style="width:50% !important" >{{formatSize(data.db.size)}}</span>                                    
 											</a>
 										</li>
 										<li>
 											<a href="#">
 												<i class="icon32 icon-black icon-save"></i>
-												<span class="blue">DB Size</span>                             
+												<span class="blue">数据库大小</span>
 												<span class="green" style="width:50% !important" >{{formatSize(data.db.physical_size)}}</span>                                    
 											</a>
 										</li>

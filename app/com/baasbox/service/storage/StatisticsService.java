@@ -48,28 +48,28 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
  */
 public class StatisticsService {
 
-    public static ImmutableMap data() throws SqlInjectionException, InvalidCollectionException{
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        UserDao userDao = UserDao.getInstance();
-        CollectionDao collDao = CollectionDao.getInstance();
-        AssetDao assetDao = AssetDao.getInstance();
-        ODatabaseRecordTx db = DbHelper.getConnection();
-
-        long usersCount =userDao.getCount();
-        long assetsCount = assetDao.getCount();
-        long collectionsCount = collDao.getCount();
-        List<ODocument> collections = collDao.get(QueryParams.getInstance());
-        ArrayList<ImmutableMap> collMap = collectionsDetails(collections);
-        ImmutableMap response = ImmutableMap.of(
-                "users", usersCount,
-                "collections", collectionsCount,
-                "collections_details", collMap,
-                "assets",assetsCount
-        );
-        if (Logger.isDebugEnabled()) Logger.debug(response.toString());
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return response;
-    }
+		public static ImmutableMap data() throws SqlInjectionException, InvalidCollectionException{
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			UserDao userDao = UserDao.getInstance();
+			CollectionDao collDao = CollectionDao.getInstance();
+			AssetDao assetDao = AssetDao.getInstance();
+			ODatabaseRecordTx db = DbHelper.getConnection();
+			
+			long usersCount =userDao.getCount();
+			long assetsCount = assetDao.getCount();
+			long collectionsCount = collDao.getCount();
+			List<ODocument> collections = collDao.get(QueryParams.getInstance());
+			ArrayList<ImmutableMap> collMap = collectionsDetails(collections);
+			ImmutableMap response = ImmutableMap.of(
+					"users", usersCount,
+					"collections", collectionsCount,
+					"collections_details", collMap,
+					"assets",assetsCount
+					);
+			if (Logger.isDebugEnabled()) Logger.debug(response.toString());
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return response;
+		}
 
     public static ImmutableMap data(String appName) throws SqlInjectionException, InvalidCollectionException{
         if (Logger.isTraceEnabled()) Logger.trace("Method Start");
@@ -99,135 +99,135 @@ public class StatisticsService {
         if (Logger.isTraceEnabled()) Logger.trace("Method End");
         return response;
     }
+    
+		/**
+		 * @param collections list of ODocuments representing the defined collections
+		 * @return for each collection: its name, the number of documents, and the total size that the collection takes up
+		 * @throws InvalidCollectionException
+		 */
+		public static ArrayList<ImmutableMap> collectionsDetails(List<ODocument> collections)	throws InvalidCollectionException {
+			ODatabaseRecordTx db = DbHelper.getConnection();
+			ArrayList<ImmutableMap> collMap = new ArrayList<ImmutableMap>();
+			for(ODocument doc:collections){
+				String collectionName = doc.field(CollectionDao.NAME);
+				DocumentDao docDao = DocumentDao.getInstance(collectionName);
+				long numberOfRecords=0;
+				try{
+					numberOfRecords=docDao.getCount();
+					OClass myClass = db.getMetadata().getSchema().getClass(collectionName);
+					long size=0;
+					for (int clusterId : myClass.getClusterIds()) {
+					  size += db.getClusterRecordSizeById(clusterId);
+					}
+					collMap.add(ImmutableMap.of(
+							"name",collectionName,
+							"records", numberOfRecords,
+							"size",size
+							));
+				}catch (Throwable e){
+					Logger.error(ExceptionUtils.getFullStackTrace(e));
+				}
+			}
+			return collMap;
+		}
+		
+		public static String dbConfiguration() {
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			PrintStream ps = new PrintStream(baos);
+			OGlobalConfiguration.dumpConfiguration(ps);
+			String content = "";
+			try {
+				content=baos.toString("UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				content=baos.toString();
+			}
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return content;
+		}
+		
+		public static ImmutableMap db() {
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			ODatabaseRecordTx db = DbHelper.getConnection();
+			HashMap dbProp= new HashMap();
+			dbProp.put("version", OConstants.getVersion());
+			dbProp.put("url", OConstants.ORIENT_URL);
+			dbProp.put("path", db.getStorage().getConfiguration().getDirectory());
+			dbProp.put("timezone", db.getStorage().getConfiguration().getTimeZone());
+			dbProp.put("locale.language", db.getStorage().getConfiguration().getLocaleLanguage());
+			dbProp.put("locale.country", db.getStorage().getConfiguration().getLocaleCountry());
+			
+			ImmutableMap response = ImmutableMap.of(
+					"properties", dbProp,
+					"size", db.getSize(),
+					"status", db.getStatus(),
+					"configuration", dbConfiguration(),
+					"physical_size",FileUtils.sizeOfDirectory(new File (BBConfiguration.getDBDir()))
+					);
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return response;
+		}
+		
+		public static ImmutableMap os() {
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			ImmutableMap response=null;
+			if (BBConfiguration.getStatisticsSystemOS()){
+				response = ImmutableMap.of(
+						"os_name", System.getProperty("os.name"),
+						"os_arch",  System.getProperty("os.arch"),
+						"os_version",  System.getProperty("os.version"),
+						"processors",  Runtime.getRuntime().availableProcessors()
+						);
+			}else{
+				response = ImmutableMap.of(
+						"os_name", "N/A",
+						"os_arch", "N/A",
+						"os_version",  "N/A",
+						"processors",  0
+						);				
+			}
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return response;
+		}
+		
+		public static ImmutableMap java() {
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			ImmutableMap response = ImmutableMap.of(
+					"java_class_version", System.getProperty("java.class.version"),
+					"java_vendor",  System.getProperty("java.vendor"),
+					"java_vendor_url",  System.getProperty("java.vendor.url"),
+					"java_version",  System.getProperty("java.version")
+					);
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return response;
+		}	
+		
+		public static ImmutableMap memory() {
+			if (Logger.isTraceEnabled()) Logger.trace("Method Start");
+			ImmutableMap response=null;
 
-    /**
-     * @param collections list of ODocuments representing the defined collections
-     * @return for each collection: its name, the number of documents, and the total size that the collection takes up
-     * @throws InvalidCollectionException
-     */
-    public static ArrayList<ImmutableMap> collectionsDetails(List<ODocument> collections)	throws InvalidCollectionException {
-        ODatabaseRecordTx db = DbHelper.getConnection();
-        ArrayList<ImmutableMap> collMap = new ArrayList<ImmutableMap>();
-        for(ODocument doc:collections){
-            String collectionName = doc.field(CollectionDao.NAME);
-            DocumentDao docDao = DocumentDao.getInstance(collectionName);
-            long numberOfRecords=0;
-            try{
-                numberOfRecords=docDao.getCount();
-                OClass myClass = db.getMetadata().getSchema().getClass(collectionName);
-                long size=0;
-                for (int clusterId : myClass.getClusterIds()) {
-                    size += db.getClusterRecordSizeById(clusterId);
-                }
-                collMap.add(ImmutableMap.of(
-                        "name",collectionName,
-                        "records", numberOfRecords,
-                        "size",size
-                ));
-            }catch (Throwable e){
-                Logger.error(ExceptionUtils.getFullStackTrace(e));
-            }
-        }
-        return collMap;
-    }
-
-    public static String dbConfiguration() {
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(baos);
-        OGlobalConfiguration.dumpConfiguration(ps);
-        String content = "";
-        try {
-            content=baos.toString("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            content=baos.toString();
-        }
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return content;
-    }
-
-    public static ImmutableMap db() {
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        ODatabaseRecordTx db = DbHelper.getConnection();
-        HashMap dbProp= new HashMap();
-        dbProp.put("version", OConstants.getVersion());
-        dbProp.put("url", OConstants.ORIENT_URL);
-        dbProp.put("path", db.getStorage().getConfiguration().getDirectory());
-        dbProp.put("timezone", db.getStorage().getConfiguration().getTimeZone());
-        dbProp.put("locale.language", db.getStorage().getConfiguration().getLocaleLanguage());
-        dbProp.put("locale.country", db.getStorage().getConfiguration().getLocaleCountry());
-
-        ImmutableMap response = ImmutableMap.of(
-                "properties", dbProp,
-                "size", db.getSize(),
-                "status", db.getStatus(),
-                "configuration", dbConfiguration(),
-                "physical_size",FileUtils.sizeOfDirectory(new File (BBConfiguration.getDBDir()))
-        );
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return response;
-    }
-
-    public static ImmutableMap os() {
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        ImmutableMap response=null;
-        if (BBConfiguration.getStatisticsSystemOS()){
-            response = ImmutableMap.of(
-                    "os_name", System.getProperty("os.name"),
-                    "os_arch",  System.getProperty("os.arch"),
-                    "os_version",  System.getProperty("os.version"),
-                    "processors",  Runtime.getRuntime().availableProcessors()
-            );
-        }else{
-            response = ImmutableMap.of(
-                    "os_name", "N/A",
-                    "os_arch", "N/A",
-                    "os_version",  "N/A",
-                    "processors",  0
-            );
-        }
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return response;
-    }
-
-    public static ImmutableMap java() {
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        ImmutableMap response = ImmutableMap.of(
-                "java_class_version", System.getProperty("java.class.version"),
-                "java_vendor",  System.getProperty("java.vendor"),
-                "java_vendor_url",  System.getProperty("java.vendor.url"),
-                "java_version",  System.getProperty("java.version")
-        );
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return response;
-    }
-
-    public static ImmutableMap memory() {
-        if (Logger.isTraceEnabled()) Logger.trace("Method Start");
-        ImmutableMap response=null;
-
-        if (BBConfiguration.getStatisticsSystemMemory()){
-            Runtime rt = Runtime.getRuntime();
-            long maxMemory=rt.maxMemory();
-            long freeMemory=rt.freeMemory();
-            long totalMemory=rt.totalMemory();
-            response = ImmutableMap.of(
-                    "max_allocable_memory",maxMemory,
-                    "current_allocate_memory", totalMemory,
-                    "used_memory_in_the_allocate_memory",totalMemory - freeMemory,
-                    "free_memory_in_the_allocated_memory", freeMemory
-            );
-        }else{
-            response = ImmutableMap.of(
-                    "max_allocable_memory",0,
-                    "current_allocate_memory", 0,
-                    "used_memory_in_the_allocate_memory",0 ,
-                    "free_memory_in_the_allocated_memory", 0
-            );
-        }
-
-        if (Logger.isTraceEnabled()) Logger.trace("Method End");
-        return response;
-    }
-
+			if (BBConfiguration.getStatisticsSystemMemory()){
+				Runtime rt = Runtime.getRuntime(); 
+				long maxMemory=rt.maxMemory();
+				long freeMemory=rt.freeMemory();
+				long totalMemory=rt.totalMemory();
+				response = ImmutableMap.of(
+						"max_allocable_memory",maxMemory,
+						"current_allocate_memory", totalMemory,
+						"used_memory_in_the_allocate_memory",totalMemory - freeMemory,
+						"free_memory_in_the_allocated_memory", freeMemory
+						);
+			}else{
+				response = ImmutableMap.of(
+						"max_allocable_memory",0,
+						"current_allocate_memory", 0,
+						"used_memory_in_the_allocate_memory",0 ,
+						"free_memory_in_the_allocated_memory", 0
+						);
+			}
+			
+			if (Logger.isTraceEnabled()) Logger.trace("Method End");
+			return response;
+		}	
+		
 }

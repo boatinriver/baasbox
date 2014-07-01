@@ -1,7 +1,11 @@
 			<div id="assets" ng-controller="AssetsController">
-				<p class="hint">
-					Assets are specific objects. They don't belong to any collection and they are publicly available, even without authentication. They could be JSON documents, or files. In this last case you may also specify and associate a JSON object
-				</p>			
+				@*<p class="hint">*@
+					@*Assets are specific objects. They don't belong to any collection and they are publicly available, even without authentication. They could be JSON documents, or files. In this last case you may also specify and associate a JSON object*@
+				@*</p>*@
+                <p class="hint">
+					资源是特输的的对象，这些对象不属于任何的集合，这些资源是共有的。他们可能是json格式的文档，或是普通文件。
+					如果是普通文件的话，仍然需要提供相关的描述json。
+				</p>
 				@admin.main_.content_.assets_.assets()
 				@admin.main_.content_.assets_.newAsset()
 			</div>

@@ -5,8 +5,11 @@ import com.baasbox.dao.exception.InvalidAppException;
 import com.baasbox.dao.exception.InvalidCollectionException;
 import com.baasbox.dao.exception.SqlInjectionException;
 import com.baasbox.db.DbHelper;
+import com.baasbox.enumerations.DefaultRoles;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.metadata.security.ODatabaseSecurityResources;
+import com.orientechnologies.orient.core.metadata.security.ORole;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import play.Logger;
 
@@ -49,6 +52,15 @@ public class AppDao extends NodeDao {
             throw new InvalidAppException("App name is not valid: it can't be prefixed with _BB_");
         }
         save(doc);
+
+        ORole registeredRole = RoleDao.getRole(DefaultRoles.REGISTERED_USER.toString());
+        ORole anonymousRole = RoleDao.getRole(DefaultRoles.ANONYMOUS_USER.toString());
+        registeredRole.addRule(ODatabaseSecurityResources.CLASS + "." + MODEL_NAME, ORole.PERMISSION_READ);
+        registeredRole.addRule(ODatabaseSecurityResources.CLUSTER + "." + MODEL_NAME, ORole.PERMISSION_READ);
+//        anonymousRole.addRule(ODatabaseSecurityResources.CLASS + "." + MODEL_NAME, ORole.PERMISSION_READ);
+//        anonymousRole.addRule(ODatabaseSecurityResources.CLUSTER + "." + MODEL_NAME, ORole.PERMISSION_READ);
+        PermissionsHelper.grantRead(doc, registeredRole);
+//        PermissionsHelper.grantRead(doc, anonymousRole);
         if (Logger.isTraceEnabled()) Logger.trace("Method End");
         return doc;
     }

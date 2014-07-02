@@ -194,11 +194,11 @@ GET		 /document/%23:rid							com.baasbox.controllers.Document.getDocumentByRid(
 
 # @tag(baasbox.data.write)
 POST	 /document/:collection	 					com.baasbox.controllers.Document.createDocument(collection: String)
-POST	 /document/:appName/:collection	 			com.baasbox.controllers.Document.w3createDocument(appName: String, collection: String)
+POST	 /document/:appName/:collection	 		    com.baasbox.controllers.Document.w3createDocument(appName: String, collection: String)
 
 # @tag(baasbox.data.read)
 GET		 /document/:collection						com.baasbox.controllers.Document.getDocuments(collection: String)
-GET		 /document/:appName/:collection				com.baasbox.controllers.Document.w3getDocuments(appName: String,collection: String)
+GET		 /document/:appName/:collection			    com.baasbox.controllers.Document.w3getDocuments(appName: String,collection: String)
 
 # @tag(baasbox.data.read)
 GET 	 /document/:collection/count  				com.baasbox.controllers.Document.getCount(collection: String)
